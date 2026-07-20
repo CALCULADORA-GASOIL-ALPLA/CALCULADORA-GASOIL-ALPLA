@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Monitor de Combustible · ALPLA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue-900:#00284d; --blue-800:#003d7a; --blue-700:#00509e; --blue-600:#0066bf;
+    --blue-400:#4fa3e3; --blue-100:#e7f1fb;
+    --ink:#0b2540; --ink-soft:#5b7185;
+    --paper:#f5f8fb; --card:#ffffff; --line:#dbe6f0;
+    --amber:#e8a33d; --red:#d1495b; --green:#1f9d7c;
+    --radius-lg:24px; --radius-md:16px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:
+      radial-gradient(1100px 600px at 85% -10%, var(--blue-100), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #eef4fb, transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    padding:36px 20px 70px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;}
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:22px; margin-bottom:32px; flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:16px;}
+  .logo-mark{
+    width:60px;height:60px;border-radius:16px;background:#fff;
+    border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 20px -10px rgba(0,61,122,0.35);flex-shrink:0;padding:8px;
+  }
+  .brand-text .eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--blue-600);font-weight:700;margin:0 0 4px;
+  }
+  .brand-text h1{
+    font-family:'Sora',sans-serif;font-size:24px;font-weight:800;margin:0;
+    color:var(--blue-900);letter-spacing:-0.01em;
+  }
+  .header-note{max-width:300px;font-size:13px;color:var(--ink-soft);line-height:1.5;text-align:right;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  .grid.full-below{margin-top:22px;}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    padding:26px 26px 28px;box-shadow:0 20px 40px -30px rgba(0,40,77,0.3);
+  }
+  .card-full{grid-column:1 / -1;}
+
+  .section-title{
+    font-family:'Sora',sans-serif;font-weight:700;font-size:15.5px;color:var(--blue-900);
+    margin:0 0 4px;display:flex;align-items:center;gap:8px;
+  }
+  .section-sub{font-size:12.5px;color:var(--ink-soft);margin:0 0 18px;line-height:1.5;}
+
+  .fp-hero{display:flex;flex-wrap:wrap;gap:26px;align-items:center;}
+  .fp-hero .fp-controls{flex:1;min-width:240px;}
+  .fp-row{display:flex;align-items:center;gap:14px;background:#fbfdff;border:1.6px solid var(--blue-400);
+    padding:10px 16px;border-radius:var(--radius-sm);}
+  
+  .fp-derived{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .mini-stat{
+    background:#fbfdff;border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:10px 14px;flex:1;min-width:130px;
+  }
+  .mini-stat .ms-label{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+  .mini-stat .ms-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--blue-800);margin-top:2px;}
+
+  .dial-wrap{display:flex;flex-direction:column;align-items:center;min-width:220px;}
+  .dial-zone-label{display:flex;justify-content:space-between;width:220px;font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;color:var(--ink-soft);margin-top:-6px;}
+  .fp-readout{text-align:center;margin-top:6px;}
+  .fp-readout .big{font-family:'Sora',sans-serif;font-weight:800;font-size:36px;color:var(--blue-900);line-height:1;transition:color .2s;}
+  .fp-readout .label{font-size:11px;color:var(--ink-soft);font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin-top:3px;}
+  .fp-tag{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;}
+  .tag-good{background:#e2f6ef;color:var(--green);}
+  .tag-warn{background:#fdf1de;color:#9a6a12;}
+  .tag-bad{background:#fbe7ea;color:var(--red);}
+  .tag-ideal{background:#e3edfb;color:var(--blue-700);}
+
+  .field{margin-bottom:15px;}
+  .field label{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;
+    font-weight:600;color:var(--blue-900);margin-bottom:6px;}
+  .field label .unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--blue-600);font-weight:700;}
+  input[type=number]{
+    width:100%;font-family:'JetBrains Mono',monospace;font-size:15.5px;font-weight:600;color:var(--ink);
+    padding:11px 13px;border-radius:var(--radius-sm);border:1.5px solid var(--line);background:#fbfdff;outline:none;transition:.15s;
+  }
+  input[type=number]:focus{border-color:var(--blue-600);box-shadow:0 0 0 3px rgba(0,102,191,0.12);}
+  input[type=number]:disabled{background:#eef4fb;color:var(--ink-soft);border-color:var(--line);}
+  
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .divider-title{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);
+    font-weight:700;margin:18px 0 12px;padding-top:14px;border-top:1px dashed var(--line);}
+  .divider-title:first-child{margin-top:0;padding-top:0;border-top:none;}
+
+  .compare-row{
+    display:grid;grid-template-columns:1fr auto 1fr auto;gap:10px;align-items:center;
+    background:#fbfdff;border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:14px 16px;margin-bottom:10px;
+  }
+  .compare-row .c-label{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--blue-900);margin-bottom:6px;}
+  .compare-col{text-align:center;}
+  .compare-col .c-tag{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+  .compare-col .c-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--blue-800);}
+  .compare-arrow{color:var(--ink-soft);font-size:18px;}
+  .compare-diff{text-align:right;}
+  .compare-diff .c-val{font-size:15px; font-family:'JetBrains Mono',monospace; font-weight:700;}
+
+  .highlight-box{
+    background:linear-gradient(120deg, var(--blue-700), var(--blue-900));color:#fff;border-radius:var(--radius-sm);
+    padding:15px 18px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;
+  }
+  .highlight-box .h-label{font-size:12.5px;font-weight:600;opacity:.9;}
+  .highlight-box .h-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:19px;}
+
+  .alert-box{
+    background:#fff5f5;border:1px solid #f6c6cd;border-left:4px solid var(--red);border-radius:var(--radius-sm);
+    padding:14px 16px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .alert-box .a-label{color:#a3273a;font-size:12.5px;font-weight:700;}
+  .alert-box .a-sub{display:block;color:#b0475a;font-size:11px;font-weight:500;margin-top:3px;}
+
+  #needle{transition:transform .5s cubic-bezier(.34,1.56,.64,1);transform-origin:120px 130px;}
+
+  footer{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    margin-top:36px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);line-height:1.6;}
+  footer .by{font-family:'Sora',sans-serif;font-weight:700;color:var(--blue-700);display:block;margin-top:6px;font-size:13.5px;}
+
+  /* =========================================================
+     MEDIA QUERIES (OPTIMIZACIÓN MÓVIL AISLADA)
+     ========================================================= */
+  
+  @media (max-width:900px){ 
+    .grid{grid-template-columns:1fr;} 
+  }
+
+  @media (max-width:640px){ 
+    body { padding: 20px 12px 40px; overflow-x: hidden; } 
+    header { flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+    .brand { width: 100%; }
+    .header-note { text-align: left; max-width: 100%; font-size: 12px; }
+    .logo-mark { width: 50px; height: 50px; padding: 6px; border-radius: 12px; }
+    .brand-text h1 { font-size: 20px; line-height: 1.2; }
+    .brand-text .eyebrow { line-height: 1.3; }
+    
+    .card { padding: 20px 16px 22px; border-radius: var(--radius-md); } 
+    
+    .compare-row { 
+      grid-template-columns: 1fr; 
+      text-align: left; 
+      gap: 8px;
+    } 
+    .compare-arrow { display: none; } 
+    .compare-col { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+    .compare-diff { display: flex; justify-content: space-between; align-items: baseline; text-align: left; padding-top: 2px;}
+    
+    .highlight-box { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .highlight-box .h-value { align-self: flex-end; }
+
+    /* Aumentar tamaño fuente de inputs sólo en móvil para evitar zoom en iOS/Android */
+    input[type=number] { font-size: 16px; padding: 12px 14px; -webkit-appearance: none; appearance: none; }
+  }
+
+  @media (max-width:520px){ 
+    .field-grid { grid-template-columns: 1fr; gap: 10px; } 
+    .fp-hero { flex-direction: column; align-items: stretch; }
+    .dial-wrap { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 20px; width: 100%; }
+    .mini-stat { min-width: 45%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo-mark">
+        <svg viewBox="0 0 100 100" width="100%" height="100%">
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#00509e" stroke-width="8"/>
+          <path d="M 30 20 H 70 V 80 H 30 V 40 H 60 V 30 H 30 Z M 40 50 H 60 V 70 H 40 Z" fill="#00509e" fill-rule="evenodd"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <p class="eyebrow">ALPLA DE VENEZUELA · DEPARTAMENTO DE MANTENIMIENTO</p>
+        <h1>Monitor de Gasoil y Consumo</h1>
+      </div>
+    </div>
+    <p class="header-note">Correlaciona inventario entre tanques y calcula el consumo y horas de trabajo del generador basándose en totalizadores.</p>
+  </header>
+
+  <div class="grid">
+    <!-- Configuración -->
+    <div class="card">
+      <p class="section-title">① Capacidades del Sistema</p>
+      <p class="section-sub">Define el volumen máximo de los tanques. La capacidad de XQ ha sido fijada a 4730 L.</p>
+      
+      <div class="field">
+        <label>Capacidad Tanque 2 <span class="unit">Lts</span></label>
+        <input type="number" id="capT2" step="1" min="0" value="20000" placeholder="Ej: 20000">
+      </div>
+      <div class="field">
+        <label>Capacidad Almacenamiento XQ <span class="unit">Lts</span></label>
+        <input type="number" id="capXQ" step="1" min="0" value="4730" placeholder="Ej: 4730">
+      </div>
+      
+      <div class="alert-box" id="capAlert" style="display:none; padding:10px 12px; margin-top:0;">
+        <div>
+          <span class="a-label">Falta capacidad de XQ</span>
+          <span class="a-sub">Los cálculos para el generador no serán exactos sin este valor.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Proyección de Recargas -->
+    <div class="card">
+      <p class="section-title">② Proyección de Recargas al XQ</p>
+      <p class="section-sub">Calcula cuántas veces puedes recargar el generador hasta su tope operativo (85%) con un volumen determinado.</p>
+      
+      <div class="field">
+        <label>Volumen disponible (cisterna o tanque) <span class="unit">Lts</span></label>
+        <input type="number" id="volumenRecargas" step="1" min="0" placeholder="Ej: 16000">
+      </div>
+      
+      <div class="field-grid" style="margin-top:14px;">
+        <div class="mini-stat"><div class="ms-label">Vol. por recarga (85%)</div><div class="ms-value" id="vol_por_recarga">— L</div></div>
+        <div class="mini-stat"><div class="ms-label">Cant. de recargas</div><div class="ms-value" id="cant_recargas">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid full-below">
+    <!-- Cálculo de Consumo (Generador) -->
+    <div class="card card-full">
+      <p class="section-title">③ Cálculo de Consumo del Generador</p>
+      <p class="section-sub">Resta entre los valores de los totalizadores para obtener los litros consumidos y las horas de trabajo.</p>
+
+      <div class="divider-title">Lecturas de Combustible (Totalizador)</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>FUEL CONSUMPTION (Inicial) <span class="unit">Lts</span></label>
+          <input type="number" id="combInicio" step="0.001" min="0" placeholder="Ej: 958418">
+        </div>
+        <div class="field">
+          <label>FUEL CONSUMPTION (Final) <span class="unit">Lts</span></label>
+          <input type="number" id="combFinal" step="0.001" min="0" placeholder="Ej: 959680">
+        </div>
+      </div>
+
+      <div class="divider-title">ENGINE HOURS</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Horas Trabajo Inicio <span class="unit">Hrs</span></label>
+          <input type="number" id="hrInicio" step="0.1" min="0" placeholder="Ej: 5232.2">
+        </div>
+        <div class="field">
+          <label>Horas Trabajo Final <span class="unit">Hrs</span></label>
+          <input type="number" id="hrFinal" step="0.1" min="0" placeholder="Ej: 5236.8">
+        </div>
+      </div>
+
+      <div class="compare-row" style="margin-top: 18px;">
+        <div class="c-label">Resultados del Período</div>
+        <div class="compare-col"><div class="c-tag">Gasoil Gastado</div><div class="c-val" id="res_cons_lts" style="color:var(--red);">— L</div></div>
+        <div class="compare-col"><div class="c-tag">Horas de Trabajo</div><div class="c-val" id="res_hrs">— h</div></div>
+        <div class="compare-diff"><div class="c-tag">Tasa de Consumo</div><div class="c-val" id="res_tasa" style="color:var(--blue-700);">— L/h</div></div>
+      </div>
+      
+      <div class="highlight-box" style="background:linear-gradient(120deg, var(--ink-soft), var(--ink));">
+        <span class="h-label">EQUIVALENCIA CONSUMIDA (TANQUE XQ)</span>
+        <span class="h-value" id="res_cons_pct">— %</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Correlación de Inventario (Gauge) -->
+  <div class="card card-full" style="margin-top:22px;">
+    <p class="section-title">④ Inventario Actual y Correlación</p>
+    <p class="section-sub">Ingresa las lecturas actuales de ambos tanques (considera que el Tanque 2 tiene una tolerancia visual de ±200L).</p>
+
+    <div class="fp-hero">
+      <div class="fp-controls">
+        <div class="field-grid">
+          <div class="field">
+            <label>Nivel Tanque 2 <small style="font-weight:400;color:var(--ink-soft);">(Visual)</small> <span class="unit">Lts</span></label>
+            <input type="number" id="lectT2" step="100" min="0" placeholder="Ej: 9000">
+          </div>
+          <div class="field">
+            <label>Almacenamiento XQ <small style="font-weight:400;color:var(--ink-soft);">(Panel)</small> <span class="unit">%</span></label>
+            <input type="number" id="lectXQ_pct" step="1" min="0" max="100" placeholder="Ej: 41">
+          </div>
+        </div>
+        
+        <div class="fp-derived">
+          <div class="mini-stat"><div class="ms-label">Tanque 2 en Porcentaje</div><div class="ms-value" id="inv_t2_pct">— %</div></div>
+          <div class="mini-stat"><div class="ms-label">Tanque XQ en Litros</div><div class="ms-value" id="inv_xq_lts">— L</div></div>
+          <div class="mini-stat" style="grid-column: 1 / -1; width: 100%;"><div class="ms-label">Inventario Total Estimado</div><div class="ms-value" id="inv_total_lts" style="color:var(--blue-900);">— L</div></div>
+        </div>
+      </div>
+
+      <div class="dial-wrap">
+        <svg id="gaugeSvg" viewBox="0 0 240 140" width="200">
+          <g id="zoneArcs"></g>
+          <line id="needle" x1="120" y1="130" x2="120" y2="42" stroke="#00284d" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="120" cy="130" r="8" fill="#00284d"/>
+        </svg>
+        <div class="dial-zone-label"><span>0%</span><span>100%</span></div>
+        <div class="fp-readout">
+          <div class="big" id="gaugeBig">0%</div>
+          <div class="label">Nivel del Sistema</div>
+          <div class="fp-tag" id="gaugeTag">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Herramienta de uso interno y exclusivo para ALPLA DE VENEZUELA como apoyo técnico.</span>
+    <span class="by">Designed By. Esthefania Medina · Pasante de Mantenimiento</span>
+  </footer>
+</div>
+
+<script>
+// Configuración del Gauge para el nivel del sistema (0 a 1)
+const ZONES = [
+  { min:0,    max:0.20, color:'#d1495b', label:'Crítico — Requiere cisterna', cls:'tag-bad'  },
+  { min:0.20, max:0.40, color:'#e8a33d', label:'Bajo — Planificar carga',     cls:'tag-warn' },
+  { min:0.40, max:0.80, color:'#1f9d7c', label:'Estable — Operativo',         cls:'tag-good' },
+  { min:0.80, max:1.001,color:'#0066bf', label:'Óptimo — Capacidad alta',     cls:'tag-ideal'}
+];
+const CX=120, CY=130, R=100, NEEDLE_R=88;
+
+function valToXY(val, r){
+  const c = Math.max(0, Math.min(1, val));
+  const ang = (180 - c*180) * Math.PI/180;
+  return { x: CX + r*Math.cos(ang), y: CY - r*Math.sin(ang) };
+}
+function arcPath(a,b,r){
+  const p1=valToXY(a,r), p2=valToXY(Math.min(b,1),r);
+  const large = ((Math.min(b,1)-a)*180) > 180 ? 1 : 0;
+  return `M${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A${r} ${r} 0 ${large} 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+}
+function drawZones(){
+  document.getElementById('zoneArcs').innerHTML = ZONES.map(z=>
+    `<path d="${arcPath(z.min, Math.min(z.max,1), R)}" fill="none" stroke="${z.color}" stroke-width="16" opacity="0.85"/>`
+  ).join('');
+}
+drawZones();
+
+function zoneFor(val){
+  for(const z of ZONES){ if(val>=z.min && val<=z.max) return z; }
+  return null;
+}
+function setNeedle(val){
+  const p = valToXY(val, NEEDLE_R);
+  document.getElementById('needle').setAttribute('x2', p.x.toFixed(1));
+  document.getElementById('needle').setAttribute('y2', p.y.toFixed(1));
+}
+
+const $ = id => document.getElementById(id);
+function num(id){ const v = parseFloat($(id).value); return isNaN(v) ? null : v; }
+function fmtNum(n, d=1){ return (n||0).toLocaleString('es-VE',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+// Listeners
+const inputs = ['capT2','capXQ','volumenRecargas','combInicio','combFinal','hrInicio','hrFinal','lectT2','lectXQ_pct'];
+inputs.forEach(id => {
+  if($(id)) $(id).addEventListener('input', calculate);
+});
+
+function calculate(){
+  const capT2 = num('capT2') || 20000;
+  const capXQ = num('capXQ');
+  
+  if(!capXQ){
+    $('capAlert').style.display = 'flex';
+  } else {
+    $('capAlert').style.display = 'none';
+  }
+
+  // 1. Proyección de Recargas
+  const volRecargas = num('volumenRecargas');
+  if(capXQ > 0){
+    const recarga85 = capXQ * 0.85;
+    $('vol_por_recarga').textContent = fmtNum(recarga85, 0) + ' L';
+    if(volRecargas !== null){
+      // Se muestran decimales para que evalúes si te da para 3 recargas y media, por ejemplo.
+      $('cant_recargas').textContent = fmtNum(volRecargas / recarga85, 1); 
+    } else {
+      $('cant_recargas').textContent = '—';
+    }
+  } else {
+    $('vol_por_recarga').textContent = 'Falta Cap. XQ';
+    $('cant_recargas').textContent = '—';
+  }
+
+  // 2. Cálculo de Consumo Generador
+  const cIni = num('combInicio');
+  const cFin = num('combFinal');
+  const hIni = num('hrInicio');
+  const hFin = num('hrFinal');
+
+  let consumido = 0;
+  if(cIni !== null && cFin !== null){
+    consumido = Math.max(0, cFin - cIni);
+    $('res_cons_lts').textContent = fmtNum(consumido) + ' L';
+    
+    if(capXQ){
+      $('res_cons_pct').textContent = fmtNum((consumido / capXQ) * 100) + ' %';
+    } else {
+      $('res_cons_pct').textContent = 'Falta Cap. XQ';
+    }
+  } else {
+    $('res_cons_lts').textContent = '— L';
+    $('res_cons_pct').textContent = '— %';
+  }
+
+  if(hIni !== null && hFin !== null){
+    const hrs = Math.max(0, hFin - hIni);
+    $('res_hrs').textContent = fmtNum(hrs) + ' h';
+    if(hrs > 0 && consumido > 0){
+      $('res_tasa').textContent = fmtNum(consumido / hrs) + ' L/h';
+    } else {
+      $('res_tasa').textContent = '— L/h';
+    }
+  } else {
+    $('res_hrs').textContent = '— h';
+    $('res_tasa').textContent = '— L/h';
+  }
+
+  // 3. Inventario y Correlación
+  const lT2 = num('lectT2');
+  const lXQpct = num('lectXQ_pct');
+  
+  let totalLts = 0;
+  let totalCap = capT2 + (capXQ || 0);
+  let hasT2 = false;
+  let hasXQ = false;
+
+  if(lT2 !== null){
+    $('inv_t2_pct').textContent = fmtNum((lT2 / capT2) * 100) + ' %';
+    totalLts += lT2;
+    hasT2 = true;
+  } else {
+    $('inv_t2_pct').textContent = '— %';
+  }
+
+  if(lXQpct !== null){
+    if(capXQ){
+      const lXQlts = (lXQpct / 100) * capXQ;
+      $('inv_xq_lts').textContent = fmtNum(lXQlts, 0) + ' L';
+      totalLts += lXQlts;
+      hasXQ = true;
+    } else {
+      $('inv_xq_lts').textContent = 'Falta Cap. XQ';
+    }
+  } else {
+    $('inv_xq_lts').textContent = '— L';
+  }
+
+  // Gauge Update
+  if(hasT2 || hasXQ){
+    // Tolerancia visual T2 nota
+    $('inv_total_lts').textContent = '~ ' + fmtNum(totalLts, 0) + ' L';
+    const pctGlobal = totalCap > 0 ? (totalLts / totalCap) : 0;
+    
+    $('gaugeBig').textContent = fmtNum(pctGlobal * 100, 0) + '%';
+    const z = zoneFor(pctGlobal);
+    $('gaugeTag').textContent = z ? z.label : '—';
+    $('gaugeTag').className = 'fp-tag ' + (z ? z.cls : '');
+    $('gaugeBig').style.color = z ? z.color : '#00284d';
+    setNeedle(pctGlobal);
+  } else {
+    $('inv_total_lts').textContent = '— L';
+    $('gaugeBig').textContent = '0%';
+    $('gaugeTag').textContent = '—';
+    $('gaugeTag').className = 'fp-tag';
+    $('gaugeBig').style.color = '#00284d';
+    setNeedle(0);
+  }
+}
+
+// Inicializar estado de aguja en 0
+setNeedle(0);
+calculate();
+</script>
+</body>
+</html>

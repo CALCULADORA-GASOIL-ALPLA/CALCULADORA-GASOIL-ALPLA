@@ -176,9 +176,6 @@
     .compare-col { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
     .compare-diff { display: flex; justify-content: space-between; align-items: baseline; text-align: left; padding-top: 2px;}
     
-    .highlight-box { flex-direction: column; align-items: flex-start; gap: 6px; }
-    .highlight-box .h-value { align-self: flex-end; }
-
     /* Aumentar tamaño fuente de inputs sólo en móvil para evitar zoom en iOS/Android */
     input[type=number] { font-size: 16px; padding: 12px 14px; -webkit-appearance: none; appearance: none; }
   }
@@ -279,6 +276,10 @@
             <label>FUEL CONSUMPTION (Final) <span class="unit">Lts</span></label>
             <input type="number" id="combFinal" step="0.001" min="0" placeholder="Ej: 959680">
           </div>
+          <div class="field" style="grid-column: 1 / -1;">
+            <label>Nivel del Generador (Inicial) <span class="unit">%</span></label>
+            <input type="number" id="pctInicioTot" step="1" min="0" max="100" placeholder="Ej: 85 (Requerido para dar el saldo exacto)">
+          </div>
         </div>
       </div>
 
@@ -316,11 +317,18 @@
         <div class="compare-diff"><div class="c-tag">Tasa de Consumo</div><div class="c-val" id="res_tasa" style="color:var(--blue-700);">— L/h</div></div>
       </div>
       
-      <div class="highlight-box" style="background:linear-gradient(120deg, var(--ink-soft), var(--ink));">
-        <span class="h-label">ESTADO DEL TANQUE XQ (FINAL)</span>
-        <div>
-            <span class="h-value" id="res_saldo_pct">— %</span>
-            <span class="h-sub" id="res_saldo_lts" style="text-align: right;">— L restantes</span>
+      <!-- CAJA OSCURA MODIFICADA -->
+      <div class="highlight-box" style="background:linear-gradient(120deg, var(--ink-soft), var(--ink)); align-items: stretch; padding: 16px 20px;">
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+          <span class="h-label" style="font-size: 11px; opacity: 0.8; margin-bottom: 4px;">TOTAL CONSUMIDO</span>
+          <span class="h-value" id="res_cons_pct_box" style="text-align: left;">— %</span>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: right; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 18px;">
+          <span class="h-label" style="font-size: 11px; opacity: 0.8; margin-bottom: 4px;">SALDO RESTANTE</span>
+          <div>
+              <span class="h-value" id="res_saldo_pct_box">— %</span>
+              <span class="h-sub" id="res_saldo_lts_box" style="display:block; font-size:11px; font-weight:400; opacity:0.8; margin-top:2px;">— L</span>
+          </div>
         </div>
       </div>
     </div>
@@ -434,7 +442,7 @@ $('calcModeToggle').addEventListener('click', () => {
 });
 
 // Listeners
-const inputs = ['capT2','capXQ','volumenRecargas','nivelActualXQ_recarga','combInicio','combFinal','pctInicio','pctFinal','hrInicio','hrFinal','lectT2','lectXQ_pct'];
+const inputs = ['capT2','capXQ','volumenRecargas','nivelActualXQ_recarga','combInicio','combFinal','pctInicioTot','pctInicio','pctFinal','hrInicio','hrFinal','lectT2','lectXQ_pct'];
 inputs.forEach(id => {
   if($(id)) $(id).addEventListener('input', calculate);
 });
@@ -475,55 +483,66 @@ function calculate(){
   // 2. Cálculo de Consumo Generador
   const hIni = num('hrInicio');
   const hFin = num('hrFinal');
-  let consumido = 0;
-  let saldoLts = 0;
-  let saldoPct = 0;
+  let consumidoLts = 0;
+  let consumidoPct = 0;
+  let saldoLts = null;
+  let saldoPct = null;
 
   if (calcMode === 'litros') {
       const cIni = num('combInicio');
       const cFin = num('combFinal');
+      const pIniTot = num('pctInicioTot');
       
       if(cIni !== null && cFin !== null){
-        consumido = Math.max(0, cFin - cIni);
-        // Para calcular el saldo, asumimos que si calculan por litros, el tanque no estaba necesariamente lleno,
-        // pero podemos proyectar el saldo si sabemos cuanto se gastó. Necesitaríamos saber cuanto había inicialmente en litros.
-        // Como no lo sabemos con certeza en este modo, mostraremos un mensaje indicando que falta información de nivel, o calcularemos el % gastado.
-        const pctGastado = capXQ > 0 ? (consumido / capXQ) * 100 : 0;
-        $('res_saldo_pct').textContent = '-' + fmtNum(pctGastado) + ' %';
-        $('res_saldo_lts').textContent = 'Consumidos de la capacidad total';
-      } else {
-        $('res_saldo_pct').textContent = '— %';
-        $('res_saldo_lts').textContent = '— L restantes';
+        consumidoLts = Math.max(0, cFin - cIni);
+        consumidoPct = capXQ > 0 ? (consumidoLts / capXQ) * 100 : 0;
+        
+        if(pIniTot !== null && capXQ > 0){
+          const ltsIniciales = (pIniTot / 100) * capXQ;
+          saldoLts = Math.max(0, ltsIniciales - consumidoLts);
+          saldoPct = (saldoLts / capXQ) * 100;
+        }
       }
   } else {
       const pIni = num('pctInicio');
       const pFin = num('pctFinal');
       
       if(pIni !== null && pFin !== null && capXQ > 0){
-        const pctConsumido = Math.max(0, pIni - pFin);
-        consumido = (pctConsumido / 100) * capXQ;
+        consumidoPct = Math.max(0, pIni - pFin);
+        consumidoLts = (consumidoPct / 100) * capXQ;
+        
         saldoPct = pFin;
         saldoLts = (pFin / 100) * capXQ;
-        
-        $('res_saldo_pct').textContent = fmtNum(saldoPct) + ' %';
-        $('res_saldo_lts').textContent = fmtNum(saldoLts, 0) + ' L restantes';
-      } else {
-        $('res_saldo_pct').textContent = '— %';
-        $('res_saldo_lts').textContent = '— L restantes';
       }
   }
 
-  if (consumido > 0) {
-      $('res_cons_lts').textContent = fmtNum(consumido) + ' L';
+  // Pintar los resultados de consumo y saldo
+  if (consumidoLts > 0 || consumidoPct > 0) {
+      $('res_cons_lts').textContent = fmtNum(consumidoLts) + ' L';
+      $('res_cons_pct_box').textContent = fmtNum(consumidoPct) + ' %';
   } else {
       $('res_cons_lts').textContent = '— L';
+      $('res_cons_pct_box').textContent = '— %';
   }
 
+  if (saldoPct !== null && saldoLts !== null) {
+      $('res_saldo_pct_box').textContent = fmtNum(saldoPct) + ' %';
+      $('res_saldo_lts_box').textContent = fmtNum(saldoLts, 0) + ' L';
+  } else {
+      $('res_saldo_pct_box').textContent = '— %';
+      if (calcMode === 'litros' && consumidoLts > 0) {
+          $('res_saldo_lts_box').textContent = 'Falta % inicial';
+      } else {
+          $('res_saldo_lts_box').textContent = '— L';
+      }
+  }
+
+  // Pintar las horas y la tasa
   if(hIni !== null && hFin !== null){
     const hrs = Math.max(0, hFin - hIni);
     $('res_hrs').textContent = fmtNum(hrs) + ' h';
-    if(hrs > 0 && consumido > 0){
-      $('res_tasa').textContent = fmtNum(consumido / hrs) + ' L/h';
+    if(hrs > 0 && consumidoLts > 0){
+      $('res_tasa').textContent = fmtNum(consumidoLts / hrs) + ' L/h';
     } else {
       $('res_tasa').textContent = '— L/h';
     }

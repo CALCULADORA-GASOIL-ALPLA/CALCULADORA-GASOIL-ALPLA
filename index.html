@@ -66,8 +66,6 @@
 
   .fp-hero{display:flex;flex-wrap:wrap;gap:26px;align-items:center;}
   .fp-hero .fp-controls{flex:1;min-width:240px;}
-  .fp-row{display:flex;align-items:center;gap:14px;background:#fbfdff;border:1.6px solid var(--blue-400);
-    padding:10px 16px;border-radius:var(--radius-sm);}
   
   .fp-derived{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
   .mini-stat{
@@ -114,7 +112,6 @@
   .compare-col{text-align:center;}
   .compare-col .c-tag{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
   .compare-col .c-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--blue-800);}
-  .compare-arrow{color:var(--ink-soft);font-size:18px;}
   .compare-diff{text-align:right;}
   .compare-diff .c-val{font-size:15px; font-family:'JetBrains Mono',monospace; font-weight:700;}
 
@@ -123,7 +120,8 @@
     padding:15px 18px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;
   }
   .highlight-box .h-label{font-size:12.5px;font-weight:600;opacity:.9;}
-  .highlight-box .h-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:19px;}
+  .highlight-box .h-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:19px; text-align: right;}
+  .highlight-box .h-sub{display:block; font-size:11px; font-weight:400; opacity:0.8; margin-top:2px;}
 
   .alert-box{
     background:#fff5f5;border:1px solid #f6c6cd;border-left:4px solid var(--red);border-radius:var(--radius-sm);
@@ -131,6 +129,18 @@
   }
   .alert-box .a-label{color:#a3273a;font-size:12.5px;font-weight:700;}
   .alert-box .a-sub{display:block;color:#b0475a;font-size:11px;font-weight:500;margin-top:3px;}
+
+  /* Toggles */
+  .toggle-row{display:flex;align-items:center;gap:10px;padding:8px 2px;cursor:pointer;user-select:none;margin-top:8px;}
+  .switch{width:36px;height:21px;background:#d7e3ee;border-radius:20px;position:relative;transition:.18s;flex-shrink:0;}
+  .switch::after{content:"";position:absolute;width:15px;height:15px;background:#fff;border-radius:50%;
+    top:3px;left:3px;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.18s;}
+  .switch.on{background:var(--blue-700);}
+  .switch.on::after{left:18px;}
+  .toggle-row span{font-size:12.5px;font-weight:600;color:var(--blue-900);}
+
+  .calc-section { display: none; }
+  .calc-section.active { display: block; }
 
   #needle{transition:transform .5s cubic-bezier(.34,1.56,.64,1);transform-origin:120px 130px;}
 
@@ -197,14 +207,14 @@
         <h1>Monitor de Gasoil y Consumo</h1>
       </div>
     </div>
-    <p class="header-note">Correlaciona inventario entre tanques y calcula el consumo y horas de trabajo del generador basándose en totalizadores.</p>
+    <p class="header-note">Correlaciona inventario entre tanques y calcula el consumo y horas de trabajo del generador basándose en totalizadores o porcentajes.</p>
   </header>
 
   <div class="grid">
     <!-- Configuración -->
     <div class="card">
       <p class="section-title">① Capacidades del Sistema</p>
-      <p class="section-sub">Define el volumen máximo de los tanques. La capacidad de XQ ha sido fijada a 4730 L.</p>
+      <p class="section-sub">Define el volumen máximo de los tanques. La capacidad de XQ ha sido fijada a 4750 L.</p>
       
       <div class="field">
         <label>Capacidad Tanque 2 <span class="unit">Lts</span></label>
@@ -212,7 +222,7 @@
       </div>
       <div class="field">
         <label>Capacidad Almacenamiento XQ <span class="unit">Lts</span></label>
-        <input type="number" id="capXQ" step="1" min="0" value="4730" placeholder="Ej: 4730">
+        <input type="number" id="capXQ" step="1" min="0" value="4750" placeholder="Ej: 4750">
       </div>
       
       <div class="alert-box" id="capAlert" style="display:none; padding:10px 12px; margin-top:0;">
@@ -226,16 +236,22 @@
     <!-- Proyección de Recargas -->
     <div class="card">
       <p class="section-title">② Proyección de Recargas al XQ</p>
-      <p class="section-sub">Calcula cuántas veces puedes recargar el generador hasta su tope operativo (85%) con un volumen determinado.</p>
+      <p class="section-sub">Calcula cuántas veces puedes recargar el generador hasta su tope operativo (85%) considerando el gasoil que ya tiene dentro.</p>
       
-      <div class="field">
-        <label>Volumen disponible (cisterna o tanque) <span class="unit">Lts</span></label>
-        <input type="number" id="volumenRecargas" step="1" min="0" placeholder="Ej: 16000">
+      <div class="field-grid">
+        <div class="field">
+          <label>Nivel actual XQ <span class="unit">%</span></label>
+          <input type="number" id="nivelActualXQ_recarga" step="1" min="0" max="100" placeholder="Ej: 20">
+        </div>
+        <div class="field">
+          <label>Vol. para recargar <span class="unit">Lts</span></label>
+          <input type="number" id="volumenRecargas" step="1" min="0" placeholder="Ej: 16000">
+        </div>
       </div>
       
       <div class="field-grid" style="margin-top:14px;">
-        <div class="mini-stat"><div class="ms-label">Vol. por recarga (85%)</div><div class="ms-value" id="vol_por_recarga">— L</div></div>
-        <div class="mini-stat"><div class="ms-label">Cant. de recargas</div><div class="ms-value" id="cant_recargas">—</div></div>
+        <div class="mini-stat"><div class="ms-label">Falta para el 85%</div><div class="ms-value" id="vol_faltante_85">— L</div></div>
+        <div class="mini-stat"><div class="ms-label">Cant. de recargas posibles</div><div class="ms-value" id="cant_recargas">—</div></div>
       </div>
     </div>
   </div>
@@ -244,17 +260,40 @@
     <!-- Cálculo de Consumo (Generador) -->
     <div class="card card-full">
       <p class="section-title">③ Cálculo de Consumo del Generador</p>
-      <p class="section-sub">Resta entre los valores de los totalizadores para obtener los litros consumidos y las horas de trabajo.</p>
+      <p class="section-sub">Calcula el consumo restando totalizadores o ingresando el porcentaje gastado.</p>
 
-      <div class="divider-title">Lecturas de Combustible (Totalizador)</div>
-      <div class="field-grid">
-        <div class="field">
-          <label>FUEL CONSUMPTION (Inicial) <span class="unit">Lts</span></label>
-          <input type="number" id="combInicio" step="0.001" min="0" placeholder="Ej: 958418">
+      <div class="toggle-row" id="calcModeToggle">
+        <div class="switch" id="calcModeSwitch"></div>
+        <span id="calcModeLabel">Calcular por Totalizador (Litros)</span>
+      </div>
+
+      <!-- Sección de Totalizadores (Litros) -->
+      <div id="sectionLitros" class="calc-section active" style="margin-top: 18px;">
+        <div class="divider-title">Lecturas de Combustible (Totalizador)</div>
+        <div class="field-grid">
+          <div class="field">
+            <label>FUEL CONSUMPTION (Inicial) <span class="unit">Lts</span></label>
+            <input type="number" id="combInicio" step="0.001" min="0" placeholder="Ej: 958418">
+          </div>
+          <div class="field">
+            <label>FUEL CONSUMPTION (Final) <span class="unit">Lts</span></label>
+            <input type="number" id="combFinal" step="0.001" min="0" placeholder="Ej: 959680">
+          </div>
         </div>
-        <div class="field">
-          <label>FUEL CONSUMPTION (Final) <span class="unit">Lts</span></label>
-          <input type="number" id="combFinal" step="0.001" min="0" placeholder="Ej: 959680">
+      </div>
+
+      <!-- Sección de Porcentajes -->
+      <div id="sectionPorcentaje" class="calc-section" style="margin-top: 18px;">
+        <div class="divider-title">Lecturas de Combustible (Porcentaje)</div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Nivel de Combustible (Inicial) <span class="unit">%</span></label>
+            <input type="number" id="pctInicio" step="1" min="0" max="100" placeholder="Ej: 85">
+          </div>
+          <div class="field">
+            <label>Nivel de Combustible (Final) <span class="unit">%</span></label>
+            <input type="number" id="pctFinal" step="1" min="0" max="100" placeholder="Ej: 41">
+          </div>
         </div>
       </div>
 
@@ -271,15 +310,18 @@
       </div>
 
       <div class="compare-row" style="margin-top: 18px;">
-        <div class="c-label">Resultados del Período</div>
+        <div class="c-label">Resultados del Consumo</div>
         <div class="compare-col"><div class="c-tag">Gasoil Gastado</div><div class="c-val" id="res_cons_lts" style="color:var(--red);">— L</div></div>
         <div class="compare-col"><div class="c-tag">Horas de Trabajo</div><div class="c-val" id="res_hrs">— h</div></div>
         <div class="compare-diff"><div class="c-tag">Tasa de Consumo</div><div class="c-val" id="res_tasa" style="color:var(--blue-700);">— L/h</div></div>
       </div>
       
       <div class="highlight-box" style="background:linear-gradient(120deg, var(--ink-soft), var(--ink));">
-        <span class="h-label">EQUIVALENCIA CONSUMIDA (TANQUE XQ)</span>
-        <span class="h-value" id="res_cons_pct">— %</span>
+        <span class="h-label">ESTADO DEL TANQUE XQ (FINAL)</span>
+        <div>
+            <span class="h-value" id="res_saldo_pct">— %</span>
+            <span class="h-sub" id="res_saldo_lts" style="text-align: right;">— L restantes</span>
+        </div>
       </div>
     </div>
   </div>
@@ -372,15 +414,34 @@ const $ = id => document.getElementById(id);
 function num(id){ const v = parseFloat($(id).value); return isNaN(v) ? null : v; }
 function fmtNum(n, d=1){ return (n||0).toLocaleString('es-VE',{minimumFractionDigits:d,maximumFractionDigits:d}); }
 
+// Modo de cálculo (Litros vs Porcentaje)
+let calcMode = 'litros'; // 'litros' o 'porcentaje'
+$('calcModeToggle').addEventListener('click', () => {
+    if (calcMode === 'litros') {
+        calcMode = 'porcentaje';
+        $('calcModeSwitch').classList.add('on');
+        $('calcModeLabel').textContent = 'Calcular por Panel (Porcentaje)';
+        $('sectionLitros').classList.remove('active');
+        $('sectionPorcentaje').classList.add('active');
+    } else {
+        calcMode = 'litros';
+        $('calcModeSwitch').classList.remove('on');
+        $('calcModeLabel').textContent = 'Calcular por Totalizador (Litros)';
+        $('sectionPorcentaje').classList.remove('active');
+        $('sectionLitros').classList.add('active');
+    }
+    calculate();
+});
+
 // Listeners
-const inputs = ['capT2','capXQ','volumenRecargas','combInicio','combFinal','hrInicio','hrFinal','lectT2','lectXQ_pct'];
+const inputs = ['capT2','capXQ','volumenRecargas','nivelActualXQ_recarga','combInicio','combFinal','pctInicio','pctFinal','hrInicio','hrFinal','lectT2','lectXQ_pct'];
 inputs.forEach(id => {
   if($(id)) $(id).addEventListener('input', calculate);
 });
 
 function calculate(){
   const capT2 = num('capT2') || 20000;
-  const capXQ = num('capXQ');
+  const capXQ = num('capXQ') || 4750;
   
   if(!capXQ){
     $('capAlert').style.display = 'flex';
@@ -390,39 +451,72 @@ function calculate(){
 
   // 1. Proyección de Recargas
   const volRecargas = num('volumenRecargas');
+  const nivelActualXQ = num('nivelActualXQ_recarga') || 0;
+
   if(capXQ > 0){
-    const recarga85 = capXQ * 0.85;
-    $('vol_por_recarga').textContent = fmtNum(recarga85, 0) + ' L';
-    if(volRecargas !== null){
-      // Se muestran decimales para que evalúes si te da para 3 recargas y media, por ejemplo.
-      $('cant_recargas').textContent = fmtNum(volRecargas / recarga85, 1); 
+    const ltsActuales = (nivelActualXQ / 100) * capXQ;
+    const ltsAl85 = capXQ * 0.85;
+    const ltsFaltantesPara85 = Math.max(0, ltsAl85 - ltsActuales);
+
+    $('vol_faltante_85').textContent = fmtNum(ltsFaltantesPara85, 0) + ' L';
+    
+    if(volRecargas !== null && ltsFaltantesPara85 > 0){
+      $('cant_recargas').textContent = fmtNum(volRecargas / ltsFaltantesPara85, 1); 
+    } else if (ltsFaltantesPara85 === 0) {
+      $('cant_recargas').textContent = 'Ya en 85%';
     } else {
       $('cant_recargas').textContent = '—';
     }
   } else {
-    $('vol_por_recarga').textContent = 'Falta Cap. XQ';
+    $('vol_faltante_85').textContent = 'Falta Cap. XQ';
     $('cant_recargas').textContent = '—';
   }
 
   // 2. Cálculo de Consumo Generador
-  const cIni = num('combInicio');
-  const cFin = num('combFinal');
   const hIni = num('hrInicio');
   const hFin = num('hrFinal');
-
   let consumido = 0;
-  if(cIni !== null && cFin !== null){
-    consumido = Math.max(0, cFin - cIni);
-    $('res_cons_lts').textContent = fmtNum(consumido) + ' L';
-    
-    if(capXQ){
-      $('res_cons_pct').textContent = fmtNum((consumido / capXQ) * 100) + ' %';
-    } else {
-      $('res_cons_pct').textContent = 'Falta Cap. XQ';
-    }
+  let saldoLts = 0;
+  let saldoPct = 0;
+
+  if (calcMode === 'litros') {
+      const cIni = num('combInicio');
+      const cFin = num('combFinal');
+      
+      if(cIni !== null && cFin !== null){
+        consumido = Math.max(0, cFin - cIni);
+        // Para calcular el saldo, asumimos que si calculan por litros, el tanque no estaba necesariamente lleno,
+        // pero podemos proyectar el saldo si sabemos cuanto se gastó. Necesitaríamos saber cuanto había inicialmente en litros.
+        // Como no lo sabemos con certeza en este modo, mostraremos un mensaje indicando que falta información de nivel, o calcularemos el % gastado.
+        const pctGastado = capXQ > 0 ? (consumido / capXQ) * 100 : 0;
+        $('res_saldo_pct').textContent = '-' + fmtNum(pctGastado) + ' %';
+        $('res_saldo_lts').textContent = 'Consumidos de la capacidad total';
+      } else {
+        $('res_saldo_pct').textContent = '— %';
+        $('res_saldo_lts').textContent = '— L restantes';
+      }
   } else {
-    $('res_cons_lts').textContent = '— L';
-    $('res_cons_pct').textContent = '— %';
+      const pIni = num('pctInicio');
+      const pFin = num('pctFinal');
+      
+      if(pIni !== null && pFin !== null && capXQ > 0){
+        const pctConsumido = Math.max(0, pIni - pFin);
+        consumido = (pctConsumido / 100) * capXQ;
+        saldoPct = pFin;
+        saldoLts = (pFin / 100) * capXQ;
+        
+        $('res_saldo_pct').textContent = fmtNum(saldoPct) + ' %';
+        $('res_saldo_lts').textContent = fmtNum(saldoLts, 0) + ' L restantes';
+      } else {
+        $('res_saldo_pct').textContent = '— %';
+        $('res_saldo_lts').textContent = '— L restantes';
+      }
+  }
+
+  if (consumido > 0) {
+      $('res_cons_lts').textContent = fmtNum(consumido) + ' L';
+  } else {
+      $('res_cons_lts').textContent = '— L';
   }
 
   if(hIni !== null && hFin !== null){

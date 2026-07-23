@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditor de Demanda Eléctrica · ALPLA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue-900:#00284d; --blue-800:#003d7a; --blue-700:#00509e; --blue-600:#0066bf;
+    --blue-400:#4fa3e3; --blue-100:#e7f1fb;
+    --ink:#0b2540; --ink-soft:#5b7185;
+    --paper:#f5f8fb; --card:#ffffff; --line:#dbe6f0;
+    --amber:#e8a33d; --red:#d1495b; --green:#1f9d7c;
+    --radius-lg:24px; --radius-md:16px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:
+      radial-gradient(1100px 600px at 85% -10%, var(--blue-100), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #eef4fb, transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    padding:36px 20px 70px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;}
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:22px; margin-bottom:32px; flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:16px;}
+  .logo-mark{
+    width:60px;height:60px;border-radius:16px;background:#fff;
+    border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 20px -10px rgba(0,61,122,0.35);flex-shrink:0;padding:8px;
+  }
+  .brand-text .eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--blue-600);font-weight:700;margin:0 0 4px;
+  }
+  .brand-text h1{
+    font-family:'Sora',sans-serif;font-size:24px;font-weight:800;margin:0;
+    color:var(--blue-900);letter-spacing:-0.01em;
+  }
+  .header-note{max-width:300px;font-size:13px;color:var(--ink-soft);line-height:1.5;text-align:right;}
+  @media (max-width:640px){ .header-note{text-align:left;max-width:100%;} }
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  .grid.full-below{margin-top:22px;}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    padding:26px 26px 28px;box-shadow:0 20px 40px -30px rgba(0,40,77,0.3);
+  }
+  .card-full{grid-column:1 / -1;}
+
+  .section-title{
+    font-family:'Sora',sans-serif;font-weight:700;font-size:15.5px;color:var(--blue-900);
+    margin:0 0 4px;display:flex;align-items:center;gap:8px;
+  }
+  .section-sub{font-size:12.5px;color:var(--ink-soft);margin:0 0 18px;line-height:1.5;}
+
+  /* base FP card */
+  .fp-hero{display:flex;flex-wrap:wrap;gap:26px;align-items:center;}
+  .fp-hero .fp-controls{flex:1;min-width:240px;}
+  .fp-row{display:flex;align-items:center;gap:14px;background:#fbfdff;border:1.6px solid var(--blue-400);
+    padding:10px 16px;border-radius:var(--radius-sm);}
+  .fp-row input[type=range]{flex:1;accent-color:var(--blue-700);cursor:pointer;}
+  .fp-row input[type=number]{
+    width:78px;padding:8px;font-size:16px;text-align:center;border:1px solid var(--line);
+    background:#fff;border-radius:8px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--blue-800);
+  }
+  .fp-note{font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.5;}
+  .fp-derived{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .mini-stat{
+    background:#fbfdff;border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:10px 14px;flex:1;min-width:130px;
+  }
+  .mini-stat .ms-label{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+  .mini-stat .ms-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--blue-800);margin-top:2px;}
+
+  /* gauge */
+  .dial-wrap{display:flex;flex-direction:column;align-items:center;min-width:220px;}
+  .dial-zone-label{display:flex;justify-content:space-between;width:220px;font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;color:var(--ink-soft);margin-top:-6px;}
+  .fp-readout{text-align:center;margin-top:6px;}
+  .fp-readout .big{font-family:'Sora',sans-serif;font-weight:800;font-size:36px;color:var(--blue-900);line-height:1;transition:color .2s;}
+  .fp-readout .label{font-size:11px;color:var(--ink-soft);font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin-top:3px;}
+  .fp-tag{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;}
+  .tag-good{background:#e2f6ef;color:var(--green);}
+  .tag-warn{background:#fdf1de;color:#9a6a12;}
+  .tag-bad{background:#fbe7ea;color:var(--red);}
+  .tag-ideal{background:#e3edfb;color:var(--blue-700);}
+
+  /* generic fields */
+  .field{margin-bottom:15px;}
+  .field label{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;
+    font-weight:600;color:var(--blue-900);margin-bottom:6px;}
+  .field label .unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--blue-600);font-weight:700;}
+  input[type=number]{
+    width:100%;font-family:'JetBrains Mono',monospace;font-size:15.5px;font-weight:600;color:var(--ink);
+    padding:11px 13px;border-radius:var(--radius-sm);border:1.5px solid var(--line);background:#fbfdff;outline:none;transition:.15s;
+  }
+  input[type=number]:focus{border-color:var(--blue-600);box-shadow:0 0 0 3px rgba(0,102,191,0.12);}
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:520px){ .field-grid{grid-template-columns:1fr;} }
+  .divider-title{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);
+    font-weight:700;margin:18px 0 12px;padding-top:14px;border-top:1px dashed var(--line);}
+  .divider-title:first-child{margin-top:0;padding-top:0;border-top:none;}
+
+  /* toggles */
+  .toggle-row{display:flex;align-items:center;gap:10px;padding:8px 2px;cursor:pointer;user-select:none;margin-top:8px;}
+  .switch{width:36px;height:21px;background:#d7e3ee;border-radius:20px;position:relative;transition:.18s;flex-shrink:0;}
+  .switch::after{content:"";position:absolute;width:15px;height:15px;background:#fff;border-radius:50%;
+    top:3px;left:3px;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.18s;}
+  .switch.on{background:var(--blue-700);}
+  .switch.on::after{left:18px;}
+  .toggle-row span{font-size:12.5px;font-weight:600;color:var(--blue-900);}
+  .toggle-fields{max-height:0;overflow:hidden;transition:max-height .25s ease;}
+  .toggle-fields.open{max-height:260px;margin:8px 0 6px;}
+
+  /* results / monitoring rows */
+  .compare-row{
+    display:grid;grid-template-columns:1fr auto 1fr auto;gap:10px;align-items:center;
+    background:#fbfdff;border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:14px 16px;margin-bottom:10px;
+  }
+  @media (max-width:640px){ .compare-row{grid-template-columns:1fr;text-align:left;} .compare-row > div{margin-bottom:4px;} }
+  .compare-row .c-label{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--blue-900);margin-bottom:6px;}
+  .compare-col{text-align:center;}
+  .compare-col .c-tag{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+  .compare-col .c-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--blue-800);}
+  .compare-arrow{color:var(--ink-soft);font-size:18px;}
+  .compare-diff{text-align:right;}
+  .compare-diff .c-val{font-size:15px;}
+  .diff-ok{color:var(--green);}
+  .diff-bad{color:var(--red);}
+
+  .result-row{display:flex;justify-content:space-between;align-items:center;background:#fbfdff;
+    border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:8px;}
+  .result-row .r-label{font-size:12.5px;font-weight:600;color:var(--ink-soft);}
+  .result-row .r-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15.5px;color:var(--blue-800);}
+
+  .highlight-box{
+    background:linear-gradient(120deg, var(--blue-700), var(--blue-900));color:#fff;border-radius:var(--radius-sm);
+    padding:15px 18px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;
+  }
+  .highlight-box .h-label{font-size:12.5px;font-weight:600;opacity:.9;}
+  .highlight-box .h-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:19px;}
+
+  .alert-box{
+    background:#fff5f5;border:1px solid #f6c6cd;border-left:4px solid var(--red);border-radius:var(--radius-sm);
+    padding:14px 16px;margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .alert-box .a-label{color:#a3273a;font-size:12.5px;font-weight:700;}
+  .alert-box .a-sub{display:block;color:#b0475a;font-size:11px;font-weight:500;margin-top:3px;}
+  .alert-box .a-value{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:#7f1d1d;}
+  .ok-box{
+    background:#eefaf5;border:1px solid #bfe9d9;border-left:4px solid var(--green);border-radius:var(--radius-sm);
+    padding:14px 16px;margin-top:12px;font-size:12.5px;color:#166a54;font-weight:600;
+  }
+
+  .formula-box{margin-top:18px;font-size:12.5px;color:var(--ink-soft);line-height:1.7;}
+  .formula-box .f-container{background:#eef4fb;border-left:4px solid var(--blue-600);padding:14px 16px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;}
+  .formula-box strong{color:var(--blue-900);font-size:13px;display:block;margin-bottom:8px;}
+  .formula-box ul{margin:0;padding-left:18px;}
+  .formula-box li{margin-bottom:6px;}
+  .formula-box code{font-family:'JetBrains Mono',monospace;background:#fff;padding:2px 6px;border-radius:4px;
+    color:var(--blue-800);font-weight:600;border:1px solid #dce8f5;}
+
+  #needle{transition:transform .5s cubic-bezier(.34,1.56,.64,1);transform-origin:120px 130px;}
+
+  footer{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    margin-top:36px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);line-height:1.6;}
+  footer .by{font-family:'Sora',sans-serif;font-weight:700;color:var(--blue-700);display:block;margin-top:6px;font-size:13.5px;}
+
+  /* =========================================================
+     ESTILOS BARRA DE NAVEGACIÓN SUPERIOR (HOVER)
+     ========================================================= */
+  .top-nav-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
+  }
+  .top-nav-trigger {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 18px;
+    z-index: 10000;
+  }
+  .top-nav-bar {
+    position: relative;
+    background: var(--blue-900);
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    transform: translateY(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0,40,77,0.3);
+  }
+  .top-nav-wrapper:hover .top-nav-bar {
+    transform: translateY(0);
+  }
+  .top-nav-bar a {
+    background: var(--card);
+    color: var(--blue-900);
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .top-nav-bar a:hover {
+    background: var(--blue-100);
+    border-color: var(--blue-400);
+  }
+
+  @media (max-width:640px) {
+    .top-nav-bar { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<!-- BARRA DE NAVEGACIÓN DESPLEGABLE -->
+<div class="top-nav-wrapper">
+  <div class="top-nav-trigger"></div>
+  <nav class="top-nav-bar">
+    <a href="index.html">Gasoil</a>
+    <a href="calculador_pintura.html">Pintura</a>
+    <a href="auditor_demanda_ALPLA.html">Demanda Eléctrica</a>
+  </nav>
+</div>
+<!-- FIN BARRA DE NAVEGACIÓN -->
+
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo-mark">
+        <svg viewBox="0 0 100 100" width="100%" height="100%">
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#00509e" stroke-width="8"/>
+          <path d="M 30 20 H 70 V 80 H 30 V 40 H 60 V 30 H 30 Z M 40 50 H 60 V 70 H 40 Z" fill="#00509e" fill-rule="evenodd"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <p class="eyebrow">ALPLA DE VENEZUELA · DEPARTAMENTO DE MANTENIMIENTO</p>
+        <h1>Auditor de Demanda Eléctrica</h1>
+      </div>
+    </div>
+    <p class="header-note">Compara lo que realmente consumes contra lo que te factura la distribuidora, estimando el kVAh con un factor de potencia constante.</p>
+  </header>
+
+  <!-- FP constante -->
+  <div class="card">
+    <p class="section-title">① Factor de Potencia constante de la planta</p>
+    <p class="section-sub">Como la factura ya no reporta el kVAh, se estima con este FP fijo que uses internamente para tus cálculos.</p>
+    <div class="fp-hero">
+      <div class="fp-controls">
+        <div class="fp-row">
+          <input type="range" id="fp_slider" min="0" max="1" step="0.01" value="0.90">
+          <input type="number" id="fp_input" min="0" max="1" step="0.01" value="0.90">
+        </div>
+        <p class="fp-note">Este FP se aplica sobre el <b>consumo real (kWh)</b> de la sección ② para estimar la energía aparente y reactiva.</p>
+        <div class="fp-derived">
+          <div class="mini-stat"><div class="ms-label">kVAh estimado</div><div class="ms-value" id="kvahEst">—</div></div>
+          <div class="mini-stat"><div class="ms-label">kVARh estimado</div><div class="ms-value" id="kvarhEst">—</div></div>
+        </div>
+      </div>
+      <div class="dial-wrap">
+        <svg id="gaugeSvg" viewBox="0 0 240 140" width="200">
+          <g id="zoneArcs"></g>
+          <line id="needle" x1="120" y1="130" x2="120" y2="42" stroke="#00284d" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="120" cy="130" r="8" fill="#00284d"/>
+        </svg>
+        <div class="dial-zone-label"><span>0.0</span><span>1.0</span></div>
+        <div class="fp-readout">
+          <div class="big" id="fpBig">0.90</div>
+          <div class="label">FP constante</div>
+          <div class="fp-tag" id="fpTag">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid full-below">
+
+    <!-- LEFT: lo que tengo -->
+    <div class="card">
+      <p class="section-title">② Tu lectura real <small style="font-weight:400;color:var(--ink-soft);">(lo que tienes)</small></p>
+      <p class="section-sub">Los valores medidos y sumados entre sí de los dos medidores. Se deben sumar las mediciones de ambos medidores y con el resultante realizar los cálculos.</p>
+
+      <div class="field">
+        <label>Consumo real <span class="unit">kWh</span></label>
+        <input type="number" id="consumoReal" step="0.01" min="0" placeholder="Ej: 227700">
+      </div>
+      <div class="field">
+        <label>Demanda real (leída) <span class="unit">kVA</span></label>
+        <input type="number" id="demandaReal" step="0.01" min="0" placeholder="Ej: 994">
+      </div>
+      <div class="field">
+        <label>Días del período <span class="unit">días</span></label>
+        <input type="number" id="dias" step="1" min="1" max="31" placeholder="Ej: 28">
+      </div>
+
+      <!-- Toggles para info extra -->
+      <div class="toggle-row" id="extraToggle">
+        <div class="switch" id="extraSwitch"></div>
+        <span>Ver parámetros eléctricos avanzados</span>
+      </div>
+      <div class="toggle-fields" id="extraFields">
+        <div class="field-grid">
+          <div class="mini-stat"><div class="ms-label">Pot. Activa</div><div class="ms-value" id="ext_kw">— kW</div></div>
+          <div class="mini-stat"><div class="ms-label">Pot. Reactiva</div><div class="ms-value" id="ext_kvar">— kVAR</div></div>
+          <div class="mini-stat" style="grid-column: 1 / -1;"><div class="ms-label">Factor de Carga</div><div class="ms-value" id="ext_fc">— %</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: lo que me cobran -->
+    <div class="card">
+      <p class="section-title">③ Lo que te factura la distribuidora <small style="font-weight:400;color:var(--ink-soft);">(lo que cobran)</small></p>
+      <p class="section-sub">Copia estos valores tal cual aparecen en tu recibo.</p>
+
+      <div class="divider-title">Energía activa</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Consumo facturado <span class="unit">kWh</span></label>
+          <input type="number" id="consumoFacturado" step="0.01" min="0" placeholder="Ej: 243964.28">
+        </div>
+        <div class="field">
+          <label>Tarifa consumo <span class="unit">Bs/kWh</span></label>
+          <input type="number" id="tarifaConsumo" step="0.00000001" min="0" placeholder="Ej: 7.95446096">
+        </div>
+      </div>
+
+      <div class="divider-title">Demanda</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Demanda contratada <span class="unit">kVA</span></label>
+          <input type="number" id="demandaContratada" step="0.01" min="0" placeholder="Ej: 3000">
+        </div>
+        <div class="field">
+          <label>Demanda facturada <span class="unit">kVA</span></label>
+          <input type="number" id="demandaFacturada" step="0.01" min="0" placeholder="Ej: 3000">
+        </div>
+      </div>
+      <div class="field">
+        <label>Tarifa demanda <span class="unit">Bs/kVA</span></label>
+        <input type="number" id="tarifaDemanda" step="0.00000001" min="0" placeholder="Ej: 651.82468444">
+      </div>
+
+      <div class="toggle-row" id="ivaToggle">
+        <div class="switch" id="ivaSwitch"></div>
+        <span>Incluir IVA</span>
+      </div>
+      <div class="toggle-fields" id="ivaFields">
+        <div class="field">
+          <label>Porcentaje de IVA <span class="unit">%</span></label>
+          <input type="number" id="ivaPorcentaje" step="0.1" min="0" value="16" placeholder="Ej: 16">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monitoreo / Auditoría -->
+  <div class="card card-full" style="margin-top:22px;">
+    <p class="section-title">④ Monitoreo: lo que tienes vs. lo que te cobran</p>
+    <p class="section-sub">Comparación directa entre tu lectura real y lo facturado, más el desglose de costos.</p>
+
+    <div class="compare-row">
+      <div class="c-label">Consumo de energía activa</div>
+      <div class="compare-col"><div class="c-tag">Real (tienes)</div><div class="c-val" id="cmp_consumoReal">—</div></div>
+      <div class="compare-arrow">→</div>
+      <div class="compare-col"><div class="c-tag">Facturado (cobran)</div><div class="c-val" id="cmp_consumoFact">—</div></div>
+      <div class="compare-diff"><div class="c-tag">Diferencia</div><div class="c-val" id="cmp_consumoDiff">—</div></div>
+    </div>
+
+    <div class="compare-row">
+      <div class="c-label">Demanda de potencia</div>
+      <div class="compare-col"><div class="c-tag">Real (tienes)</div><div class="c-val" id="cmp_demandaReal">—</div></div>
+      <div class="compare-arrow">→</div>
+      <div class="compare-col"><div class="c-tag">Facturado (cobran)</div><div class="c-val" id="cmp_demandaFact">—</div></div>
+      <div class="compare-diff"><div class="c-tag">Diferencia</div><div class="c-val" id="cmp_demandaDiff">—</div></div>
+    </div>
+
+    <div style="margin-top:18px;">
+      <div class="result-row"><span class="r-label">Costo por consumo</span><span class="r-value" id="costoConsumo">Bs. 0,00</span></div>
+      <div class="result-row"><span class="r-label">Costo por demanda facturada</span><span class="r-value" id="costoDemanda">Bs. 0,00</span></div>
+      <div class="result-row" id="rowIva" style="display:none;"><span class="r-label" id="lblIva">IVA (16%)</span><span class="r-value" id="costoIva">Bs. 0,00</span></div>
+    </div>
+
+    <div class="highlight-box">
+      <span class="h-label">TOTAL ESTIMADO DE LA FACTURA</span>
+      <span class="h-value" id="costoTotal">Bs. 0,00</span>
+    </div>
+
+    <div class="alert-box" id="ociosaAlert" style="display:none;">
+      <div>
+        <span class="a-label">Penalización por capacidad ociosa</span>
+        <span class="a-sub" id="ociosaDesc">Diferencia entre la demanda facturada y tu demanda real.</span>
+      </div>
+      <div class="a-value" id="ociosaCosto">Bs. 0,00</div>
+    </div>
+    <div class="ok-box" id="ociosaOk" style="display:none;">
+      No hay capacidad ociosa: tu demanda facturada coincide con (o es menor que) tu demanda real.
+    </div>
+  </div>
+
+  <!-- Fórmulas -->
+  <div class="card card-full" style="margin-top:22px;">
+    <p class="section-title">⑤ Cómo se calculan estos valores</p>
+    <div class="formula-box">
+      <div class="f-container">
+        <strong>Fórmulas aplicadas</strong>
+        <ul>
+          <li><code>kVAh estimado = Consumo real (kWh) ÷ FP</code></li>
+          <li><code>kVARh estimado = √(kVAh² − kWh²)</code></li>
+          <li><code>Potencia Activa (kW) = Demanda Real (kVA) × FP</code></li>
+          <li><code>Potencia Reactiva (kVAR) = Demanda Real (kVA) × sen(cos⁻¹(FP))</code></li>
+          <li><code>Factor de Carga (%) = [ Consumo real ÷ (Demanda real × 24h × Días) ] × 100</code></li>
+          <li><code>Costo consumo = Consumo facturado × Tarifa consumo ÷ 30 × Días</code></li>
+          <li><code>Costo demanda = Demanda facturada × Tarifa demanda ÷ 30 × Días</code></li>
+          <li><code>Capacidad ociosa = (Demanda facturada − Demanda real) × Tarifa demanda ÷ 30 × Días</code></li>
+          <li><code>Total = Costo consumo + Costo demanda + IVA (si aplica)</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Herramienta de uso interno y exclusivo para ALPLA DE VENEZUELA como apoyo técnico.</span>
+    <span class="by">Designed By. Esthefania Medina · Pasante de Mantenimiento</span>
+  </footer>
+</div>
+
+<script>
+const ZONES = [
+  { min:0,     max:0.855, color:'#d1495b', label:'Crítico — posible penalización', cls:'tag-bad'  },
+  { min:0.855, max:0.935, color:'#e8a33d', label:'Regular — fluctuante',           cls:'tag-warn' },
+  { min:0.935, max:0.99,  color:'#1f9d7c', label:'Estable',                        cls:'tag-good' },
+  { min:0.99,  max:1.001, color:'#0066bf', label:'Ideal',                          cls:'tag-ideal'}
+];
+const CX=120, CY=130, R=100, NEEDLE_R=88;
+
+function fpToXY(fp,r){
+  const c = Math.max(0, Math.min(1, fp));
+  const ang = (180 - c*180) * Math.PI/180;
+  return { x: CX + r*Math.cos(ang), y: CY - r*Math.sin(ang) };
+}
+function arcPath(a,b,r){
+  const p1=fpToXY(a,r), p2=fpToXY(Math.min(b,1),r);
+  const large = ((Math.min(b,1)-a)*180) > 180 ? 1 : 0;
+  return `M${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A${r} ${r} 0 ${large} 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+}
+function drawZones(){
+  document.getElementById('zoneArcs').innerHTML = ZONES.map(z=>
+    `<path d="${arcPath(z.min, Math.min(z.max,1), R)}" fill="none" stroke="${z.color}" stroke-width="16" opacity="0.85"/>`
+  ).join('');
+}
+drawZones();
+
+function zoneFor(fp){
+  for(const z of ZONES){ if(fp>=z.min && fp<=z.max) return z; }
+  return null;
+}
+function setNeedle(fp){
+  const p = fpToXY(fp, NEEDLE_R);
+  document.getElementById('needle').setAttribute('x2', p.x.toFixed(1));
+  document.getElementById('needle').setAttribute('y2', p.y.toFixed(1));
+}
+
+const $ = id => document.getElementById(id);
+function num(id){ const v = parseFloat($(id).value); return isNaN(v) ? null : v; }
+function fmtBs(n){ return 'Bs. ' + (n||0).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtNum(n, d=2){ return (n||0).toLocaleString('es-VE',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+// FP slider <-> number sync
+$('fp_slider').addEventListener('input', ()=>{ $('fp_input').value = parseFloat($('fp_slider').value).toFixed(2); calculate(); });
+$('fp_input').addEventListener('input', ()=>{
+  let v = parseFloat($('fp_input').value);
+  if(!isNaN(v) && v>=0 && v<=1){ $('fp_slider').value = v; calculate(); }
+});
+
+// Toggles
+let extraOn = false;
+$('extraToggle').addEventListener('click', ()=>{
+  extraOn = !extraOn;
+  $('extraSwitch').classList.toggle('on', extraOn);
+  $('extraFields').classList.toggle('open', extraOn);
+  calculate();
+});
+
+let ivaOn = false;
+$('ivaToggle').addEventListener('click', ()=>{
+  ivaOn = !ivaOn;
+  $('ivaSwitch').classList.toggle('on', ivaOn);
+  $('ivaFields').classList.toggle('open', ivaOn);
+  $('rowIva').style.display = ivaOn ? 'flex' : 'none';
+  calculate();
+});
+
+// Event listeners de campos
+['consumoReal','demandaReal','dias','consumoFacturado','tarifaConsumo',
+ 'demandaContratada','demandaFacturada','tarifaDemanda','ivaPorcentaje'].forEach(id=>{
+  if($(id)) $(id).addEventListener('input', calculate);
+});
+
+function calculate(){
+  const fp = parseFloat($('fp_input').value) || 0;
+  const consumoReal = num('consumoReal');
+  const demandaReal = num('demandaReal');
+  const dias = num('dias') || 0;
+  
+  const consumoFacturado = num('consumoFacturado');
+  const tarifaConsumo = num('tarifaConsumo') || 0;
+  const demandaContratada = num('demandaContratada');
+  const demandaFacturada = num('demandaFacturada');
+  const tarifaDemanda = num('tarifaDemanda') || 0;
+
+  // FP gauge
+  $('fpBig').textContent = fp.toFixed(2);
+  const z = zoneFor(fp);
+  $('fpTag').textContent = z ? z.label : '—';
+  $('fpTag').className = 'fp-tag ' + (z ? z.cls : '');
+  $('fpBig').style.color = z ? z.color : '#00284d';
+  setNeedle(fp);
+
+  // 1) Estimaciones directas del Consumo Real (kVAh y kVARh)
+  if(consumoReal!==null && fp>0){
+    const kvah = consumoReal/fp;
+    const kvarh = Math.sqrt(Math.max(kvah*kvah - consumoReal*consumoReal,0));
+    $('kvahEst').textContent = fmtNum(kvah) + ' kVAh';
+    $('kvarhEst').textContent = fmtNum(kvarh) + ' kVARh';
+  } else {
+    $('kvahEst').textContent = '—';
+    $('kvarhEst').textContent = '—';
+  }
+
+  // 2) Parámetros Eléctricos Avanzados (Toggle Section)
+  if(demandaReal !== null && fp > 0){
+    const kw = demandaReal * fp;
+    // kVAR = kVA * sen(acos(fp)) --> Math.sqrt(1 - FP^2)
+    const kvar = demandaReal * Math.sqrt(Math.max(1 - fp*fp, 0));
+    $('ext_kw').textContent = fmtNum(kw, 1) + ' kW';
+    $('ext_kvar').textContent = fmtNum(kvar, 1) + ' kVAR';
+  } else {
+    $('ext_kw').textContent = '— kW';
+    $('ext_kvar').textContent = '— kVAR';
+  }
+  
+  if(consumoReal !== null && demandaReal !== null && dias > 0 && demandaReal > 0){
+    const fc = (consumoReal / (demandaReal * 24 * dias)) * 100;
+    $('ext_fc').textContent = fmtNum(fc, 1) + ' %';
+  } else {
+    $('ext_fc').textContent = '— %';
+  }
+
+  // Comparación consumo
+  $('cmp_consumoReal').textContent = consumoReal!==null ? fmtNum(consumoReal)+' kWh' : '—';
+  $('cmp_consumoFact').textContent = consumoFacturado!==null ? fmtNum(consumoFacturado)+' kWh' : '—';
+  let consumoDiffEl = $('cmp_consumoDiff');
+  if(consumoReal!==null && consumoFacturado!==null){
+    const diff = consumoFacturado - consumoReal;
+    consumoDiffEl.textContent = (diff>=0?'+':'') + fmtNum(diff) + ' kWh';
+    consumoDiffEl.className = 'c-val ' + (Math.abs(diff) < 0.01*Math.max(consumoReal,1) ? 'diff-ok' : 'diff-bad');
+  } else { consumoDiffEl.textContent='—'; consumoDiffEl.className='c-val'; }
+
+  // Comparación demanda
+  $('cmp_demandaReal').textContent = demandaReal!==null ? fmtNum(demandaReal)+' kVA' : '—';
+  $('cmp_demandaFact').textContent = demandaFacturada!==null ? fmtNum(demandaFacturada)+' kVA' : '—';
+  let demandaDiffEl = $('cmp_demandaDiff');
+  let demandaDiffVal = null;
+  if(demandaReal!==null && demandaFacturada!==null){
+    demandaDiffVal = demandaFacturada - demandaReal;
+    demandaDiffEl.textContent = (demandaDiffVal>=0?'+':'') + fmtNum(demandaDiffVal) + ' kVA';
+    demandaDiffEl.className = 'c-val ' + (demandaDiffVal <= 0 ? 'diff-ok' : 'diff-bad');
+  } else { demandaDiffEl.textContent='—'; demandaDiffEl.className='c-val'; }
+
+  // Costos y Totales
+  const costoConsumo = (consumoFacturado!==null && dias>0) ? consumoFacturado*tarifaConsumo/30*dias : 0;
+  const costoDemanda = (demandaFacturada!==null && dias>0) ? demandaFacturada*tarifaDemanda/30*dias : 0;
+  
+  const subtotal = costoConsumo + costoDemanda;
+  
+  // Cálculo de IVA Dinámico
+  const ivaPorcentaje = num('ivaPorcentaje');
+  const ivaVal = ivaPorcentaje !== null ? ivaPorcentaje : 16;
+  $('lblIva').textContent = `IVA (${fmtNum(ivaVal, 1)}%)`;
+  
+  const iva = ivaOn ? subtotal * (ivaVal / 100) : 0;
+  const total = subtotal + iva;
+
+  $('costoConsumo').textContent = fmtBs(costoConsumo);
+  $('costoDemanda').textContent = fmtBs(costoDemanda);
+  $('costoIva').textContent = fmtBs(iva);
+  $('costoTotal').textContent = fmtBs(total);
+
+  // Capacidad ociosa
+  if(demandaDiffVal!==null && demandaDiffVal > 0 && dias>0){
+    const costoOciosa = demandaDiffVal * tarifaDemanda / 30 * dias;
+    $('ociosaAlert').style.display='flex';
+    $('ociosaOk').style.display='none';
+    $('ociosaDesc').textContent = `Pagas por ${fmtNum(demandaDiffVal)} kVA que tu planta no consumió (demanda facturada vs. real).`;
+    $('ociosaCosto').textContent = fmtBs(costoOciosa);
+  } else if(demandaDiffVal!==null){
+    $('ociosaAlert').style.display='none';
+    $('ociosaOk').style.display='block';
+  } else {
+    $('ociosaAlert').style.display='none';
+    $('ociosaOk').style.display='none';
+  }
+}
+
+calculate();
+</script>
+</body>
+</html>

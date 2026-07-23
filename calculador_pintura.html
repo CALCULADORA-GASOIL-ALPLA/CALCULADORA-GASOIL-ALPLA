@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Estimador de Pintura · ALPLA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue-900:#00284d; --blue-800:#003d7a; --blue-700:#00509e; --blue-600:#0066bf;
+    --blue-400:#4fa3e3; --blue-100:#e7f1fb;
+    --ink:#0b2540; --ink-soft:#5b7185;
+    --paper:#f5f8fb; --card:#ffffff; --line:#dbe6f0;
+    --amber:#e8a33d; --red:#d1495b; --green:#1f9d7c;
+    --radius-lg:24px; --radius-md:16px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:
+      radial-gradient(1100px 600px at 85% -10%, var(--blue-100), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #eef4fb, transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    padding:36px 20px 70px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+
+  /* =========================================================
+     ESTILOS BARRA DE NAVEGACIÓN SUPERIOR (HOVER)
+     ========================================================= */
+  .top-nav-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
+  }
+  .top-nav-trigger {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 18px;
+    z-index: 10000;
+  }
+  .top-nav-bar {
+    position: relative;
+    background: var(--blue-900);
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    transform: translateY(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0,40,77,0.3);
+  }
+  .top-nav-wrapper:hover .top-nav-bar {
+    transform: translateY(0);
+  }
+  .top-nav-bar a {
+    background: var(--card);
+    color: var(--blue-900);
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .top-nav-bar a:hover {
+    background: var(--blue-100);
+    border-color: var(--blue-400);
+  }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:22px; margin-bottom:32px; flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:16px;}
+  .logo-mark{
+    width:60px;height:60px;border-radius:16px;background:#fff;
+    border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 20px -10px rgba(0,61,122,0.35);flex-shrink:0;padding:8px;
+  }
+  .brand-text .eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--blue-600);font-weight:700;margin:0 0 4px;
+  }
+  .brand-text h1{
+    font-family:'Sora',sans-serif;font-size:24px;font-weight:800;margin:0;
+    color:var(--blue-900);letter-spacing:-0.01em;
+  }
+  .header-note{max-width:300px;font-size:13px;color:var(--ink-soft);line-height:1.5;text-align:right;}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    padding:26px 26px 28px;box-shadow:0 20px 40px -30px rgba(0,40,77,0.3);
+    margin-bottom: 22px;
+  }
+
+  .section-title{
+    font-family:'Sora',sans-serif;font-weight:700;font-size:15.5px;color:var(--blue-900);
+    margin:0 0 4px;display:flex;align-items:center;gap:8px;
+  }
+  .section-sub{font-size:12.5px;color:var(--ink-soft);margin:0 0 18px;line-height:1.5;}
+
+  .field{margin-bottom:15px;}
+  .field label{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;
+    font-weight:600;color:var(--blue-900);margin-bottom:6px;}
+  .field label .unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--blue-600);font-weight:700;}
+  
+  input[type=number], select{
+    width:100%;font-family:'JetBrains Mono',monospace;font-size:15.5px;font-weight:600;color:var(--ink);
+    padding:11px 13px;border-radius:var(--radius-sm);border:1.5px solid var(--line);background:#fbfdff;outline:none;transition:.15s;
+  }
+  select { font-family:'Inter',sans-serif; cursor: pointer; }
+  input[type=number]:focus, select:focus{border-color:var(--blue-600);box-shadow:0 0 0 3px rgba(0,102,191,0.12);}
+  input[type=number]:disabled, select:disabled{background:#eef4fb;color:var(--ink-soft);border-color:var(--line); cursor:not-allowed;}
+  
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  
+  /* Presentaciones Radio Cards */
+  .pres-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-top: 10px;
+  }
+  .pres-card {
+    border: 2px solid var(--line); border-radius: var(--radius-sm); padding: 16px 12px;
+    text-align: center; cursor: pointer; transition: 0.2s; background: #fbfdff;
+  }
+  .pres-card:hover { border-color: var(--blue-400); background: var(--blue-100); }
+  .pres-card.active { border-color: var(--blue-700); background: var(--blue-100); box-shadow: 0 4px 12px rgba(0,80,158,0.15); }
+  .pres-icon { font-size: 28px; margin-bottom: 8px; color: var(--blue-700); }
+  .pres-title { font-size: 13px; font-weight: 700; color: var(--blue-900); display: block; }
+  .pres-vol { font-size: 11px; color: var(--ink-soft); font-family: 'JetBrains Mono', monospace; }
+
+  /* Resultados */
+  .highlight-box{
+    background:linear-gradient(120deg, var(--blue-700), var(--blue-900));color:#fff;border-radius:var(--radius-sm);
+    padding:20px; display:flex; justify-content:space-between; align-items:center; margin-top:16px;
+    box-shadow: 0 10px 20px -10px rgba(0,80,158,0.5);
+  }
+  .highlight-box .h-label{font-size:12px;font-weight:600;opacity:.9; text-transform: uppercase; letter-spacing: 1px;}
+  .highlight-box .h-value{font-family:'Sora',sans-serif;font-weight:800;font-size:32px; line-height: 1.2;}
+  .highlight-box .h-sub{display:block; font-size:12px; font-weight:400; opacity:0.8; margin-top:4px;}
+
+  .mini-stats-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  .mini-stat{
+    background:#fbfdff;border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:12px 16px;flex:1;min-width:130px;
+  }
+  .mini-stat .ms-label{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+  .mini-stat .ms-value{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;color:var(--blue-800);margin-top:4px;}
+
+  .hidden { display: none !important; }
+
+  footer{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    margin-top:20px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);line-height:1.6;}
+  footer .by{font-family:'Sora',sans-serif;font-weight:700;color:var(--blue-700);display:block;margin-top:6px;font-size:13.5px;}
+
+  @media (max-width:640px){ 
+    body { padding: 20px 12px 40px; margin-top: 20px; } 
+    header { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .header-note { text-align: left; max-width: 100%; }
+    .field-grid { grid-template-columns: 1fr; }
+    .highlight-box { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .highlight-box > div { width: 100%; border-left: none !important; padding-left: 0 !important; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 12px; text-align: left !important; }
+    
+    .top-nav-bar { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<!-- BARRA DE NAVEGACIÓN DESPLEGABLE -->
+<div class="top-nav-wrapper">
+  <div class="top-nav-trigger"></div>
+  <nav class="top-nav-bar">
+    <a href="index.html">Gasoil</a>
+    <a href="calculador_pintura.html">Pintura</a>
+    <a href="auditor_demanda_ALPLA.html">Demanda Eléctrica</a>
+  </nav>
+</div>
+<!-- FIN BARRA DE NAVEGACIÓN -->
+
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo-mark">
+        <svg viewBox="0 0 100 100" width="100%" height="100%">
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#00509e" stroke-width="8"/>
+          <path d="M 30 20 H 70 V 80 H 30 V 40 H 60 V 30 H 30 Z M 40 50 H 60 V 70 H 40 Z" fill="#00509e" fill-rule="evenodd"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <p class="eyebrow">ALPLA DE VENEZUELA · DEPARTAMENTO DE MANTENIMIENTO</p>
+        <h1>Estimador de Pintura</h1>
+      </div>
+    </div>
+    <p class="header-note">Calcula la cantidad aproximada de pintura y solvente necesario considerando superficie, aplicación y excedentes.</p>
+  </header>
+
+  <div class="card">
+    <p class="section-title">① Dimensiones del Área</p>
+    <p class="section-sub">Ingresa las medidas y el sistema de unidades a utilizar.</p>
+    <div class="field-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+      <div class="field">
+        <label>Largo</label>
+        <input type="number" id="dimLargo" step="0.1" min="0" placeholder="Ej: 10">
+      </div>
+      <div class="field">
+        <label>Ancho / Alto</label>
+        <input type="number" id="dimAncho" step="0.1" min="0" placeholder="Ej: 3">
+      </div>
+      <div class="field">
+        <label>Unidad</label>
+        <select id="dimUnidad">
+          <option value="1">Metros (m)</option>
+          <option value="0.3048">Pies (ft)</option>
+          <option value="0.0254">Pulgadas (in)</option>
+        </select>
+      </div>
+    </div>
+    <div class="mini-stats-row" style="margin-top: 0;">
+      <div class="mini-stat"><div class="ms-label">Área Neta a Pintar</div><div class="ms-value" id="resArea">0.00 m²</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">② Parámetros de Superficie y Producto</p>
+    <p class="section-sub">Define las características del sustrato, tipo de pintura y método de aplicación.</p>
+    
+    <div class="field-grid">
+      <div class="field">
+        <label>Tipo de Superficie</label>
+        <select id="tipoSuperficie">
+          <option value="1.0">Pared Lisa</option>
+          <option value="1.2">Pared Rugosa / Obra Limpia</option>
+          <option value="0.9">Metal Pulido</option>
+          <option value="1.1">Metal Rústico / Oxidado</option>
+          <option value="0.9">Tubería de PVC</option>
+          <option value="1.0">Otro Material Liso</option>
+          <option value="1.2">Otro Material con Textura</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Tipo de Pintura</label>
+        <select id="tipoPintura">
+          <option value="caucho">Caucho (Base Agua)</option>
+          <option value="aceite">Aceite / Esmalte</option>
+          <option value="elastomerica">Elastomérica (Impermeabilizante)</option>
+          <option value="epoxica">Epóxica Industrial</option>
+          <option value="spray">Aerosol (Spray)</option>
+          <option value="otro">Otro Líquido (Requiere Densidad)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Caja dinámica para Otro Líquido -->
+    <div class="field-grid hidden" id="cajaDensidad">
+      <div class="field">
+        <label>Densidad del Líquido <span class="unit">kg/L</span></label>
+        <input type="number" id="densidadLiquido" step="0.01" min="0" placeholder="Ej: 1.2">
+      </div>
+      <div class="field">
+        <label>Rendimiento Teórico <span class="unit">m²/L</span></label>
+        <input type="number" id="rendimientoOtro" step="0.1" min="0" placeholder="Ej: 8.5">
+      </div>
+    </div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label>Clase / Calidad</label>
+        <select id="clasePintura">
+          <option value="AA">Clase AA (Máximo Cubrimiento)</option>
+          <option value="A">Clase A (Alto Cubrimiento)</option>
+          <option value="B">Clase B (Cubrimiento Medio)</option>
+          <option value="C">Clase C (Económica / Requiere más manos)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Método de Aplicación</label>
+        <select id="metodoAplicacion">
+          <option value="1.1">Rodillo (Absorción media)</option>
+          <option value="1.0">Brocha (Aplicación directa)</option>
+          <option value="1.3">Compresor / Pistola (Mayor overspray)</option>
+          <option value="1.0" id="optSpray" class="hidden">Spray Directo</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Caja dinámica para Solvente/Thinner -->
+    <div class="field-grid hidden" id="cajaThinner" style="margin-top: 14px;">
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Proporción de Solvente / Thinner (Para pistola) <span class="unit">%</span></label>
+        <input type="number" id="pctThinner" step="1" min="0" value="15" placeholder="Ej: 15">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">③ Presentación del Producto</p>
+    <p class="section-sub">Selecciona el formato de envase comercial para realizar el estimado.</p>
+    
+    <div class="pres-grid" id="contenedorPresentaciones">
+      <!-- Se llena dinámicamente con JS -->
+    </div>
+  </div>
+
+  <div class="card" style="background: var(--paper); border: none;">
+    <p class="section-title">④ Estimación Final</p>
+    <p class="section-sub">Cálculo que incluye un 5% de excedente por norma para mermas y retoques finales.</p>
+    
+    <div class="highlight-box">
+      <div>
+        <span class="h-label">Total a Solicitar</span>
+        <div class="h-value" id="resultadoPrincipal">0 <span style="font-size: 20px; font-weight:600;">Envases</span></div>
+        <span class="h-sub" id="resultadoSub">Basado en 0.00 m² efectivos a cubrir</span>
+      </div>
+      <div style="text-align: right; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px; min-width: 150px;">
+        <div style="margin-bottom: 12px;">
+          <span class="h-label" style="font-size: 11px;">Excedente (5%)</span>
+          <div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:16px; margin-top:4px;" id="resultadoExcedente">0.00 L</div>
+        </div>
+        <div id="cajaResultadoThinner" class="hidden">
+          <span class="h-label" style="font-size: 11px;">Thinner Sugerido</span>
+          <div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:16px; margin-top:4px; color:#e7f1fb;" id="resultadoThinner">0.00 L</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Herramienta de estimación técnica para ALPLA DE VENEZUELA.</span>
+    <span class="by">Designed By. Esthefanía Medina · Pasante de Mantenimiento</span>
+  </footer>
+</div>
+
+<script>
+// --- DATOS TÉCNICOS ---
+// Rendimiento base aproximado (m2 por Galón) según clase y tipo
+const RENDIMIENTO_BASE = {
+  'caucho': { 'AA': 35, 'A': 30, 'B': 25, 'C': 15 },
+  'aceite': { 'AA': 40, 'A': 35, 'B': 30, 'C': 20 },
+  'epoxica': { 'AA': 25, 'A': 25, 'B': 25, 'C': 25 }, 
+  'elastomerica': { 'AA': 10, 'A': 10, 'B': 10, 'C': 10 }, 
+  'spray': { 'AA': 1.5, 'A': 1.5, 'B': 1.5, 'C': 1.5 } 
+};
+
+// Presentaciones comerciales 
+const PRESENTACIONES = {
+  'estandar': [
+    { id: 'cunete', nombre: 'Cuñete', volLts: 18.92, icon: '🛢️', desc: '5 Galones' },
+    { id: 'galon', nombre: 'Galón', volLts: 3.785, icon: '🪣', desc: '1 Galón' },
+    { id: 'cuarto', nombre: 'Lata 1/4', volLts: 0.946, icon: '🛢️', desc: 'Lata Pequeña' }
+  ],
+  'spray': [
+    { id: 'spray_500', nombre: 'Spray Gde', volLts: 0.5, icon: '💨', desc: '500 ml' },
+    { id: 'spray_400', nombre: 'Spray Est.', volLts: 0.4, icon: '💨', desc: '400 ml' },
+    { id: 'spray_300', nombre: 'Spray Med', volLts: 0.3, icon: '💨', desc: '300 ml' },
+    { id: 'spray_250', nombre: 'Spray Peq', volLts: 0.25, icon: '💨', desc: '250 ml' }
+  ],
+  'industrial': [
+    { id: 'tambor', nombre: 'Tambor', volLts: 200, icon: '🛢️', desc: '200 Litros' },
+    { id: 'bidon', nombre: 'Bidón', volLts: 20, icon: '🪣', desc: '20 Litros' },
+    { id: 'galon_ind', nombre: 'Galón', volLts: 3.785, icon: '🪣', desc: '3.78 Lts' }
+  ]
+};
+
+let presentacionSeleccionada = null;
+const el = id => document.getElementById(id);
+
+// --- LÓGICA DE INTERFAZ ---
+function renderPresentaciones(tipo) {
+  const contenedor = el('contenedorPresentaciones');
+  let catálogo = PRESENTACIONES.estandar;
+  
+  if (tipo === 'spray') catálogo = PRESENTACIONES.spray;
+  else if (tipo === 'otro' || tipo === 'epoxica') catálogo = PRESENTACIONES.industrial;
+
+  contenedor.innerHTML = '';
+  catálogo.forEach((p, index) => {
+    const div = document.createElement('div');
+    div.className = `pres-card ${index === 0 ? 'active' : ''}`;
+    div.dataset.id = p.id;
+    div.dataset.vol = p.volLts;
+    div.dataset.nombre = p.nombre;
+    div.innerHTML = `
+      <div class="pres-icon">${p.icon}</div>
+      <span class="pres-title">${p.nombre}</span>
+      <span class="pres-vol">${p.desc}</span>
+    `;
+    
+    if (index === 0) presentacionSeleccionada = p;
+
+    div.addEventListener('click', () => {
+      document.querySelectorAll('.pres-card').forEach(c => c.classList.remove('active'));
+      div.classList.add('active');
+      presentacionSeleccionada = p;
+      calcular();
+    });
+    
+    contenedor.appendChild(div);
+  });
+}
+
+function actualizarCamposDinamicos(resetPresentaciones = false) {
+  const tipo = el('tipoPintura').value;
+  const appMethod = el('metodoAplicacion');
+  
+  if (tipo === 'otro') {
+    el('cajaDensidad').classList.remove('hidden');
+    el('clasePintura').disabled = true;
+  } else {
+    el('cajaDensidad').classList.add('hidden');
+    el('clasePintura').disabled = false;
+  }
+
+  if (tipo === 'spray') {
+    el('optSpray').classList.remove('hidden');
+    appMethod.value = "1.0"; 
+    appMethod.disabled = true;
+    el('clasePintura').disabled = true;
+  } else {
+    el('optSpray').classList.add('hidden');
+    if (appMethod.value === "1.0" && appMethod.disabled) appMethod.value = "1.1"; 
+    appMethod.disabled = false;
+  }
+
+  // Mostrar opción de Thinner si se usa compresor (y no es spray/aerosol)
+  if (appMethod.value === "1.3" && tipo !== 'spray' && tipo !== 'caucho') {
+    el('cajaThinner').classList.remove('hidden');
+  } else {
+    el('cajaThinner').classList.add('hidden');
+  }
+
+  if (resetPresentaciones) {
+    renderPresentaciones(tipo);
+  }
+}
+
+// --- LÓGICA DE CÁLCULO ---
+function calcular() {
+  const largo = parseFloat(el('dimLargo').value) || 0;
+  const ancho = parseFloat(el('dimAncho').value) || 0;
+  const multiplicadorUnidad = parseFloat(el('dimUnidad').value);
+  
+  const areaM2 = (largo * multiplicadorUnidad) * (ancho * multiplicadorUnidad);
+  el('resArea').textContent = areaM2.toFixed(2) + ' m²';
+
+  if (areaM2 === 0) {
+    resetResultados();
+    return;
+  }
+
+  const factorSuperficie = parseFloat(el('tipoSuperficie').value);
+  const factorAplicacion = parseFloat(el('metodoAplicacion').value);
+  const areaEfectiva = areaM2 * factorSuperficie * factorAplicacion;
+
+  const tipo = el('tipoPintura').value;
+  const clase = el('clasePintura').value;
+  let litrosNecesarios = 0;
+
+  if (tipo === 'otro') {
+    const rendOtro = parseFloat(el('rendimientoOtro').value) || 0;
+    if (rendOtro > 0) litrosNecesarios = areaEfectiva / rendOtro;
+  } else if (tipo === 'spray') {
+    const litrosPorM2 = 0.4 / RENDIMIENTO_BASE.spray[clase]; 
+    litrosNecesarios = areaEfectiva * litrosPorM2;
+  } else {
+    const galonesNecesarios = areaEfectiva / RENDIMIENTO_BASE[tipo][clase];
+    litrosNecesarios = galonesNecesarios * 3.785;
+  }
+
+  const litrosConExcedente = litrosNecesarios * 1.05;
+  const litrosMermas = litrosNecesarios * 0.05;
+
+  if (presentacionSeleccionada) {
+    let cantidadEnvases = Math.ceil(litrosConExcedente / presentacionSeleccionada.volLts); 
+
+    el('resultadoPrincipal').innerHTML = `${cantidadEnvases} <span style="font-size: 20px; font-weight:600; opacity:0.9;">${cantidadEnvases === 1 ? 'Unidad' : 'Unidades'} de ${presentacionSeleccionada.nombre}</span>`;
+    el('resultadoSub').textContent = `Área efectiva a cubrir: ${areaEfectiva.toFixed(2)} m² (Inc. rugosidad y aplicación)`;
+    
+    if (tipo === 'otro' && el('densidadLiquido').value) {
+      const kilos = litrosConExcedente * parseFloat(el('densidadLiquido').value);
+      el('resultadoExcedente').innerHTML = `${litrosMermas.toFixed(2)} L<br><span style="font-size:11px; font-weight:500;">Vol total: ${litrosConExcedente.toFixed(1)} L (${kilos.toFixed(1)} Kg)</span>`;
+    } else {
+      el('resultadoExcedente').textContent = `${litrosMermas.toFixed(2)} Litros`;
+    }
+
+    // Cálculo de Thinner si aplica
+    if (!el('cajaThinner').classList.contains('hidden')) {
+      const pctThinner = parseFloat(el('pctThinner').value) || 0;
+      const litrosThinner = litrosConExcedente * (pctThinner / 100);
+      el('resultadoThinner').textContent = litrosThinner.toFixed(2) + ' Litros';
+      el('cajaResultadoThinner').classList.remove('hidden');
+    } else {
+      el('cajaResultadoThinner').classList.add('hidden');
+    }
+  }
+}
+
+function resetResultados() {
+  el('resultadoPrincipal').innerHTML = `0 <span style="font-size: 20px; font-weight:600;">Envases</span>`;
+  el('resultadoSub').textContent = `Basado en 0.00 m² efectivos a cubrir`;
+  el('resultadoExcedente').textContent = `0.00 L`;
+  el('cajaResultadoThinner').classList.add('hidden');
+}
+
+// Inicialización
+const inputs = ['dimLargo', 'dimAncho', 'dimUnidad', 'tipoSuperficie', 'tipoPintura', 'clasePintura', 'metodoAplicacion', 'densidadLiquido', 'rendimientoOtro', 'pctThinner'];
+inputs.forEach(id => {
+  const elemento = el(id);
+  if(elemento) {
+    elemento.addEventListener('input', () => {
+      if (id === 'tipoPintura') actualizarCamposDinamicos(true);
+      else if (id === 'metodoAplicacion') actualizarCamposDinamicos(false);
+      calcular();
+    });
+  }
+});
+
+actualizarCamposDinamicos(true);
+</script>
+</body>
+</html>

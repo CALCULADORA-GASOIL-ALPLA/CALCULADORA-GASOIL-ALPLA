@@ -179,74 +179,9 @@
   footer{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
     margin-top:36px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);line-height:1.6;}
   footer .by{font-family:'Sora',sans-serif;font-weight:700;color:var(--blue-700);display:block;margin-top:6px;font-size:13.5px;}
-
-  /* =========================================================
-     ESTILOS BARRA DE NAVEGACIÓN SUPERIOR (HOVER)
-     ========================================================= */
-  .top-nav-wrapper {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 9999;
-  }
-  .top-nav-trigger {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 18px;
-    z-index: 10000;
-  }
-  .top-nav-bar {
-    position: relative;
-    background: var(--blue-900);
-    padding: 10px;
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    transform: translateY(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(0,40,77,0.3);
-  }
-  .top-nav-wrapper:hover .top-nav-bar {
-    transform: translateY(0);
-  }
-  .top-nav-bar a {
-    background: var(--card);
-    color: var(--blue-900);
-    text-decoration: none;
-    font-family: 'Inter', sans-serif;
-    font-size: 11.5px;
-    font-weight: 600;
-    padding: 6px 14px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s;
-    border: 1px solid transparent;
-  }
-  .top-nav-bar a:hover {
-    background: var(--blue-100);
-    border-color: var(--blue-400);
-  }
-
-  @media (max-width:640px) {
-    .top-nav-bar { flex-wrap: wrap; }
-  }
 </style>
 </head>
 <body>
-
-<!-- BARRA DE NAVEGACIÓN DESPLEGABLE -->
-<div class="top-nav-wrapper">
-  <div class="top-nav-trigger"></div>
-  <nav class="top-nav-bar">
-    <a href="index.html">Gasoil</a>
-    <a href="calculador_pintura.html">Pintura</a>
-    <a href="auditor_demanda_ALPLA.html">Demanda Eléctrica</a>
-  </nav>
-</div>
-<!-- FIN BARRA DE NAVEGACIÓN -->
-
 <div class="wrap">
 
   <header>

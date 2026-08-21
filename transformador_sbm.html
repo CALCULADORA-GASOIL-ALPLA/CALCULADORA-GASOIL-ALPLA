@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SBM · Monitor de Carga y Posición de TAP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+<!-- Librerías: local primero -->
+<script src="./libs/chart.umd.min.js"></script>
+<script src="./libs/xlsx.full.min.js"></script>
+
+<script>
+/* Fallback CDN + notificación al cargar librerías */
+(function bootstrapLibs(){
+  if (typeof Chart === 'undefined') {
+    const s1 = document.createElement('script');
+    s1.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
+    s1.async = true;
+    s1.onload = () => window.dispatchEvent(new CustomEvent('chart-ready'));
+    document.head.appendChild(s1);
+  } else {
+    window.addEventListener('DOMContentLoaded', () => {
+      window.dispatchEvent(new CustomEvent('chart-ready'));
+    });
+  }
+
+  if (typeof XLSX === 'undefined') {
+    const s2 = document.createElement('script');
+    s2.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s2.async = true;
+    s2.onload = () => window.dispatchEvent(new CustomEvent('xlsx-ready'));
+    document.head.appendChild(s2);
+  } else {
+    window.addEventListener('DOMContentLoaded', () => {
+      window.dispatchEvent(new CustomEvent('xlsx-ready'));
+    });
+  }
+})();
+</script>
+
+<style>
+  :root{
+    --blue-900:#00284d; --blue-800:#003d7a; --blue-700:#00509e; --blue-600:#0066bf;
+    --blue-400:#4fa3e3; --blue-100:#e7f1fb;
+    --ink:#0b2540; --ink-soft:#5b7185;
+    --paper:#f5f8fb; --card:#ffffff; --line:#dbe6f0;
+    --amber:#e8a33d; --red:#d1495b; --green:#1f9d7c;
+    --radius-lg:24px; --radius-md:16px; --radius-sm:10px;
+
+    --fabrica: var(--blue-400);
+    --tap4: var(--blue-700);
+    --tap5: var(--amber);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:
+      radial-gradient(1100px 600px at 85% -10%, var(--blue-100), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #eef4fb, transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    padding:36px 20px 70px;
+  }
+  ::selection{background:var(--blue-400);color:#fff;}
+  .app{max-width:1120px;margin:0 auto;}
+
+  /* =========================================================
+     ESTILOS BARRA DE NAVEGACIÓN SUPERIOR (HOVER)
+     ========================================================= */
+  .top-nav-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
+  }
+  .top-nav-trigger {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 18px;
+    z-index: 10000;
+  }
+  .top-nav-bar {
+    position: relative;
+    background: var(--blue-900);
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    transform: translateY(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0,40,77,0.3);
+  }
+  .top-nav-wrapper:hover .top-nav-bar {
+    transform: translateY(0);
+  }
+  .top-nav-bar a {
+    background: var(--card);
+    color: var(--blue-900);
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .top-nav-bar a:hover {
+    background: var(--blue-100);
+    border-color: var(--blue-400);
+  }
+
+  /* ---------- Header ---------- */
+  .topbar{
+    display:flex; justify-content:space-between; align-items:center; gap:22px;
+    margin-bottom:32px; flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:16px;}
+  .logo-mark{
+    width:60px;height:60px;border-radius:16px;background:#fff;
+    border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 20px -10px rgba(0,61,122,0.35);flex-shrink:0;padding:8px;
+  }
+  .brand h1{
+    font-family:'Sora',sans-serif;font-size:24px;font-weight:800;margin:0;
+    color:var(--blue-900);letter-spacing:-0.01em;
+  }
+  .brand p{margin:4px 0 0;color:var(--ink-soft);font-size:13px;max-width:520px;line-height:1.5;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--blue-600);font-weight:700;margin:0 0 4px; display:block;
+  }
+
+  .uploader{display:flex;flex-direction:column;align-items:flex-end;gap:9px;}
+  .uploader-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  .btn{
+    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;
+    padding:11px 16px;border-radius:var(--radius-sm);border:1.5px solid var(--line);
+    background:#fbfdff;color:var(--ink);cursor:pointer;
+    transition:.15s; white-space:nowrap; outline:none;
+  }
+  .btn:hover{border-color:var(--blue-600); box-shadow:0 0 0 3px rgba(0,102,191,0.12);}
+  .btn-primary{background:var(--blue-700);border-color:var(--blue-700);color:#fff;}
+  .btn-primary:hover{background:var(--blue-800);border-color:var(--blue-800);}
+  .file-status{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft);text-align:right; font-weight: 500;}
+  .file-status.loaded{color:var(--green);}
+  .file-status.error{color:var(--red);}
+  .file-status.warn{color:#9a6a12;}
+
+  h2{
+    font-family:'Sora',sans-serif;font-weight:700;font-size:15.5px;color:var(--blue-900);
+    margin:0 0 16px;display:flex;align-items:center;gap:8px;
+  }
+  section{margin-bottom:22px;}
+
+  .card-panel{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    padding:26px 26px 28px;box-shadow:0 20px 40px -30px rgba(0,40,77,0.3);
+  }
+
+  .nominal-table-wrap { overflow-x: auto; }
+  table.nominal-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12.5px; min-width: 700px;}
+  table.nominal-table thead th{
+    text-align:left;color:var(--ink-soft);font-weight:700;font-size:10.5px;
+    text-transform:uppercase;letter-spacing:0.04em;padding:12px 10px;
+    border-bottom:1px dashed var(--line);
+  }
+  table.nominal-table tbody td{padding:14px 10px;border-bottom:1px solid var(--line); color: var(--ink);}
+  table.nominal-table tbody tr:last-child td{border-bottom:none;}
+  .tap-tag{ display:inline-flex;align-items:center;gap:8px;font-weight:700; color: var(--blue-900); }
+  .tap-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+  .dot-fabrica{background:var(--fabrica);} .dot-tap4{background:var(--tap4);} .dot-tap5{background:var(--tap5);}
+
+  .controls-panel{
+    display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+    padding:18px 26px;
+  }
+  .mode-selector{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .mode-label{font-size:12.5px;color:var(--blue-900);font-weight:600;}
+  .segmented{display:flex;background:#fbfdff;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:4px;gap:4px;}
+  .seg-btn{
+    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;color:var(--ink-soft);
+    background:transparent;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;
+    transition:.15s;
+  }
+  .seg-btn.active{background:var(--blue-100);color:var(--blue-900);}
+  .seg-btn:not(.active):hover{color:var(--ink);}
+  .dataset-meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft);text-align:right;}
+  .dataset-meta b{color:var(--blue-900); font-weight: 700;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(300px,1fr));gap:22px;}
+  .kpi-card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px;
+    box-shadow:0 10px 20px -15px rgba(0,40,77,0.1);
+    position:relative;overflow:hidden;
+  }
+  .kpi-card::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--tapcolor,var(--blue-400));
+  }
+  .kpi-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px; padding-bottom: 12px; border-bottom: 1px dashed var(--line);}
+  .kpi-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px; color: var(--blue-900);}
+  .badge{
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.04em;
+    padding:4px 10px;border-radius:20px;text-transform:uppercase;
+  }
+  .badge-ok{background:#e2f6ef;color:var(--green);}
+  .badge-warn{background:#fdf1de;color:#9a6a12;}
+  .badge-crit{background:#fbe7ea;color:var(--red);}
+
+  .kpi-metrics{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .metric-label{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:4px;}
+  .metric-value{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700; color: var(--blue-800);}
+  .metric-sub{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin-top:4px;}
+  .metric-value.flag-warn{color:var(--amber);}
+  .metric-value.flag-crit{color:var(--red);}
+
+  .kpi-alarmline{
+    margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);
+    display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-soft);
+  }
+
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  .chart-card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px;
+    box-shadow:0 10px 20px -15px rgba(0,40,77,0.1);
+  }
+  .chart-card.wide{grid-column:1/-1;}
+  .chart-card h3{
+    font-size:12.5px;color:var(--ink-soft);margin:0 0 16px;font-weight:700;
+  }
+  .chart-card canvas{max-height:280px;}
+  .chart-warning{
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--red);
+    background:#fbe7ea;border:1px solid #f3c6cd;border-radius:var(--radius-sm);
+    padding:12px 14px;line-height:1.6;
+  }
+
+  .analysis-panel{
+    background:linear-gradient(120deg, var(--blue-700), var(--blue-900)); color: #fff;
+    border-radius:var(--radius-lg);padding:26px; box-shadow: 0 10px 20px -10px rgba(0,80,158,0.5);
+  }
+  .analysis-panel h2 { color: #fff; opacity: 0.9; }
+  .verdict-banner{
+    display:flex;gap:18px;align-items:center;padding:18px;border-radius:var(--radius-sm);
+    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);margin-bottom:22px;
+  }
+  .verdict-icon{
+    width:44px;height:44px;flex:0 0 auto;border-radius:12px;background:var(--card);
+    display:flex;align-items:center;justify-content:center;color:var(--blue-900);font-weight:800;font-family:'Sora',sans-serif;font-size:18px;
+  }
+  .verdict-text b{color:#fff;}
+  .verdict-text{font-size:13.5px;line-height:1.6;color:rgba(255,255,255,0.9);}
+
+  .score-table-wrap { overflow-x: auto; }
+  table.score-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12px; min-width: 600px;}
+  table.score-table thead th{
+    text-align:left;color:rgba(255,255,255,0.6);font-weight:700;font-size:10px;text-transform:uppercase;
+    letter-spacing:0.04em;padding:12px 10px;border-bottom:1px solid rgba(255,255,255,0.2);
+  }
+  table.score-table tbody td{padding:14px 10px;border-bottom:1px solid rgba(255,255,255,0.1);}
+  table.score-table tbody tr:last-child td{border-bottom:none;}
+  .score-bar-wrap{width:100%;height:6px;background:rgba(255,255,255,0.2);border-radius:4px;overflow:hidden;margin-top:6px;}
+  .score-bar{height:100%;border-radius:4px;}
+
+  .extreme-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+  .etab-btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;color:var(--ink-soft);
+    background:#fbfdff;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:9px 16px;cursor:pointer;
+    transition: .15s;
+  }
+  .etab-btn:hover { border-color: var(--blue-400); }
+  .etab-btn.active{background:var(--blue-100);color:var(--blue-900);border-color:var(--blue-400);}
+
+  .extreme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;}
+  .extreme-card{background:#fbfdff;border:1px solid var(--line);border-radius:var(--radius-md);padding:18px;}
+  .extreme-card h4{
+    margin:0 0 14px;font-size:13px;display:flex;align-items:center;gap:8px;font-weight:700; color: var(--blue-900);
+    padding-bottom: 10px; border-bottom: 1px dashed var(--line);
+  }
+  .mini-table-title{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 8px; font-weight: 700;}
+  table.mini-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:11.5px; color: var(--ink);}
+  table.mini-table td{padding:6px 4px;border-bottom:1px solid var(--paper);}
+  table.mini-table tr:last-child td{border-bottom:none;}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;}
+  .status-dot.ok{background:var(--green);} .status-dot.warn{background:var(--amber);} .status-dot.crit{background:var(--red);}
+
+  footer{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    margin-top:36px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);line-height:1.6;}
+  footer .by{font-family:'Sora',sans-serif;font-weight:700;color:var(--blue-700);display:block;margin-top:6px;font-size:13.5px;}
+
+  .empty-note{
+    color:var(--ink-soft);font-size:13px;padding:40px 20px;text-align:center;font-family:'JetBrains Mono',monospace;
+    border:2px dashed var(--line);border-radius:var(--radius-md); background: #fbfdff;
+  }
+
+  @media (max-width: 860px){
+    .charts-grid{grid-template-columns:1fr;}
+    .controls-panel{flex-direction:column;align-items:flex-start;}
+    .dataset-meta{text-align:left;}
+  }
+
+  @media (max-width: 640px){
+    body { padding: 20px 12px 40px; }
+    .topbar{flex-direction:column; align-items:flex-start; gap: 16px; margin-bottom: 24px;}
+    .brand { width: 100%; }
+    .logo-mark { width: 50px; height: 50px; padding: 6px; border-radius: 12px; }
+    .brand h1 { font-size: 20px; }
+    .brand p { font-size: 12px; }
+    .uploader { align-items: flex-start; width: 100%; }
+    .uploader-row { justify-content: flex-start; width: 100%; }
+    .btn { flex: 1; text-align: center; }
+    .file-status { text-align: left; }
+    .card-panel, .kpi-card, .chart-card, .analysis-panel { padding: 20px 16px; border-radius: var(--radius-md); }
+    .top-nav-bar { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<!-- BARRA DE NAVEGACIÓN DESPLEGABLE -->
+<div class="top-nav-wrapper">
+  <div class="top-nav-trigger"></div>
+  <nav class="top-nav-bar">
+    <a href="index.html">Gasoil</a>
+    <a href="calculador_pintura.html">Pintura</a>
+    <a href="transformador_sbm.html">Estimación de Carga</a>
+  </nav>
+</div>
+<!-- FIN BARRA DE NAVEGACIÓN -->
+
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-mark">
+        <svg viewBox="0 0 100 100" width="100%" height="100%">
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#00509e" stroke-width="8"/>
+          <path d="M 30 20 H 70 V 80 H 30 V 40 H 60 V 30 H 30 Z M 40 50 H 60 V 70 H 40 Z" fill="#00509e" fill-rule="evenodd"/>
+        </svg>
+      </div>
+      <div>
+        <span class="eyebrow">Transformador SBM · 1500 kVA</span>
+        <h1>Monitor de Carga y TAP</h1>
+        <p>Estima el comportamiento del transformador ante distintas posiciones de TAP a partir de mediciones reales de tensión y corriente secundaria.</p>
+      </div>
+    </div>
+    <div class="uploader">
+      <input type="file" id="fileInput" accept=".csv,.xls,.xlsx" hidden>
+      <div class="uploader-row">
+        <button class="btn btn-primary" id="btnUpload">Cargar Datos</button>
+        <button class="btn" id="btnSample">Usar Muestra</button>
+      </div>
+      <span class="file-status" id="fileStatus">Sin datos cargados</span>
+    </div>
+  </header>
+
+  <section class="card-panel">
+    <h2>① Datos nominales del transformador</h2>
+    <div class="nominal-table-wrap">
+      <table class="nominal-table">
+        <thead>
+          <tr>
+            <th>Posición</th><th>Tensión primario (Vp)</th><th>Tensión secundario (Vs)</th>
+            <th>Relación (m)</th><th>Potencia (kVA)</th><th>Corriente primario (Ip)</th>
+            <th>Corriente secundario (Is)</th><th>Vs equiv. (Vp≈13.8kV)</th>
+          </tr>
+        </thead>
+        <tbody id="nominalBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card-panel controls-panel">
+    <div class="mode-selector">
+      <span class="mode-label">Comparar:</span>
+      <div class="segmented" id="modeSelector">
+        <button class="seg-btn active" data-mode="tap4fab">Tap 4 vs Fábrica</button>
+        <button class="seg-btn" data-mode="tap5fab">Tap 5 vs Fábrica</button>
+        <button class="seg-btn" data-mode="all">Todos (Tap 4 / Tap 5 / Fábr)</button>
+      </div>
+    </div>
+    <div class="dataset-meta" id="datasetMeta">—</div>
+  </section>
+
+  <section id="kpiSection">
+    <h2>② Indicadores y alarmas por posición</h2>
+    <div class="kpi-grid" id="kpiGrid"></div>
+  </section>
+
+  <section class="charts-grid">
+    <div class="chart-card"><h3>Tensión secundaria estimada (V)</h3><canvas id="chartVoltage"></canvas></div>
+    <div class="chart-card"><h3>Corriente secundaria estimada (A)</h3><canvas id="chartCurrent"></canvas></div>
+    <div class="chart-card wide"><h3>Carga respecto a potencia nominal (%)</h3><canvas id="chartLoad"></canvas></div>
+    <div class="chart-card wide"><h3>Medición Tensión Usys vs Tensión Estimada Tap5</h3><canvas id="chartVsUsysTap5"></canvas></div>
+    <div class="chart-card wide"><h3>Medición Corriente Isys vs Corriente Estimada Tap5</h3><canvas id="chartIsIsysTap5"></canvas></div>
+  </section>
+
+  <section class="analysis-panel">
+    <h2>③ Análisis comparativo — mejor posición</h2>
+    <div id="analysisContent"></div>
+  </section>
+
+  <section class="card-panel">
+    <h2>④ Casos críticos registrados (Top 5)</h2>
+    <div class="extreme-tabs" id="extremeTabs">
+      <button class="etab-btn active" data-var="voltage">Tensión secundaria</button>
+      <button class="etab-btn" data-var="current">Corriente secundaria</button>
+      <button class="etab-btn" data-var="carga">% Carga</button>
+    </div>
+    <div class="extreme-grid" id="extremeContent"></div>
+  </section>
+
+  <footer id="footerNote"></footer>
+</div>
+
+<script>
+const NOMINAL = {
+  fabrica: { key:'fabrica', label:'Fábrica', color:'var(--fabrica)', vp:13200, vs:440, m:30 },
+  tap4:    { key:'tap4',    label:'Tap 4',    color:'var(--tap4)',    vp:12870, vs:440, m:29.25 },
+  tap5:    { key:'tap5',    label:'Tap 5',    color:'var(--tap5)',    vp:12540, vs:440, m:28.5 },
+};
+const S_NOM = 1500;
+const IS_NOM = 1968;
+Object.values(NOMINAL).forEach(t=>{
+  t.ip = (S_NOM*1000)/(1.732*t.vp);
+  t.is = IS_NOM;
+  t.s  = S_NOM;
+  t.vpEsN = 13800/t.m;
+});
+const BASE_TAP = 'tap4';
+
+const MODES = {
+  tap4fab: { taps:['tap4','fabrica'], label:'Tap 4 vs Fábrica' },
+  tap5fab: { taps:['tap5','fabrica'], label:'Tap 5 vs Fábrica' },
+  all:     { taps:['fabrica','tap4','tap5'], label:'Tap 4 vs Tap 5 vs Fábrica' },
+};
+
+let state = {
+  rows: [],
+  results: [],
+  mode: 'tap4fab',
+  extremeVar: 'voltage',
+  fileName: null,
+};
+
+let charts = {voltage:null, current:null, load:null, vsUsysTap5:null, isIsysTap5:null};
+const resolvedColor = {fabrica:'#4fa3e3', tap4:'#00509e', tap5:'#e8a33d'};
+
+function computeResults(rows){
+  const mBase = NOMINAL[BASE_TAP].m;
+  return rows.map(r=>{
+    const vpReal = r.usys * mBase;
+    const out = { date:r.date, usys:r.usys, isys:r.isys, vpReal };
+    Object.values(NOMINAL).forEach(t=>{
+      const vs = vpReal / t.m;
+      const is = r.isys * (r.usys / vs);
+      const kva = 1.732 * vs * is / 1000;
+      const pct = (kva / t.s) * 100;
+      out[t.key] = { vs, is, kva, pct };
+    });
+    return out;
+  });
+}
+
+/* -------- Parseo -------- */
+function splitCSVLine(line){
+  const result=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){ inQ=!inQ; continue; }
+    if(ch===',' && !inQ){ result.push(cur); cur=''; continue; }
+    cur+=ch;
+  }
+  result.push(cur);
+  return result;
+}
+function parseCSVText(text){
+  const lines = text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim().length>0);
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const parts = splitCSVLine(lines[i]);
+    if(parts.length<3) continue;
+    const dateStr = (parts[0]||'').trim();
+    const usys = parseFloat(parts[1]);
+    const isys = parseFloat(parts[2]);
+    if(!dateStr || !isFinite(usys) || !isFinite(isys)) continue;
+    const d = new Date(dateStr.replace(' ','T'));
+    if(isNaN(d.getTime())) continue;
+    rows.push({date:d, usys, isys});
+  }
+  return rows;
+}
+function parseHTMLTableText(text){
+  const doc = new DOMParser().parseFromString(text, 'text/html');
+  const table = doc.querySelector('table');
+  const rows=[];
+  if(!table) return rows;
+  const trs = table.querySelectorAll('tr');
+  trs.forEach(tr=>{
+    const cells = Array.from(tr.children).map(td=>td.textContent.trim());
+    if(cells.length<1) return;
+    const dateStr = cells[0];
+    if(!dateStr || !/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return;
+    const usys = parseFloat(cells[1]);
+    const isys = parseFloat(cells[2]);
+    if(!isFinite(usys) || !isFinite(isys)) return;
+    const d = new Date(dateStr.replace(' ','T'));
+    if(isNaN(d.getTime())) return;
+    rows.push({date:d, usys, isys});
+  });
+  return rows;
+}
+function parseWithSheetJS(buf){
+  const wb = XLSX.read(buf, {type:'array'});
+  let sheetName = wb.SheetNames.find(n=>/^data$/i.test(n)) || wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const grid = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  let headerIdx = 0;
+  for(let i=0;i<Math.min(grid.length,10);i++){
+    const row = grid[i]||[];
+    if(row.some(c=>typeof c==='string' && /datetime/i.test(c))){ headerIdx=i; break; }
+  }
+  const rows=[];
+  for(let i=headerIdx+1;i<grid.length;i++){
+    const row = grid[i]||[];
+    if(row.length<3) continue;
+    let rawDate = row[0];
+    let d;
+    if(rawDate instanceof Date){ d = rawDate; }
+    else if(typeof rawDate==='number'){ d = new Date(Math.round((rawDate-25569)*86400*1000)); }
+    else if(typeof rawDate==='string'){ d = new Date(rawDate.replace(' ','T')); }
+    else continue;
+    const usys = parseFloat(row[1]);
+    const isys = parseFloat(row[2]);
+    if(isNaN(d.getTime()) || !isFinite(usys) || !isFinite(isys)) continue;
+    rows.push({date:d, usys, isys});
+  }
+  return rows;
+}
+
+async function handleFile(file){
+  setStatus('Leyendo archivo…', null);
+  try{
+    const buf = await file.arrayBuffer();
+    const head = new Uint8Array(buf.slice(0,4));
+    const isZip = head[0]===0x50 && head[1]===0x4B;
+    let rows=[];
+    if(isZip){
+      if(typeof XLSX === 'undefined') throw new Error('XLSX no cargó (verifica ./libs/xlsx.full.min.js)');
+      rows = parseWithSheetJS(buf);
+    } else {
+      const text = new TextDecoder('utf-8').decode(buf);
+      const trimmed = text.trim().slice(0,300).toLowerCase();
+      if(trimmed.includes('<html') || trimmed.includes('<table')) rows = parseHTMLTableText(text);
+      else rows = parseCSVText(text);
+    }
+
+    if(rows.length===0){
+      setStatus('No se reconocieron filas válidas.', 'error');
+      return;
+    }
+
+    rows.sort((a,b)=>a.date-b.date);
+    state.rows = rows;
+    state.results = computeResults(rows);
+    state.fileName = file.name;
+    setStatus('Cargado: '+file.name+' · '+rows.length+' registros', 'loaded');
+    renderAll();
+  } catch(err){
+    console.error(err);
+    setStatus('Error al procesar: '+err.message, 'error');
+  }
+}
+
+/* -------- Utilidades -------- */
+function setStatus(msg, kind){
+  const el = document.getElementById('fileStatus');
+  el.textContent = msg;
+  el.className = 'file-status' + (kind ? ` ${kind}` : '');
+}
+const fmt1 = n => (n===null||n===undefined||!isFinite(n)) ? '—' : n.toFixed(1);
+const fmt0 = n => (n===null||n===undefined||!isFinite(n)) ? '—' : Math.round(n).toString();
+function fmtDate(d){
+  const p = n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function mean(arr){ return arr.length? arr.reduce((a,b)=>a+b,0)/arr.length : NaN; }
+function voltStatus(vs){
+  const dev = Math.abs(vs-440)/440*100;
+  if(dev<=5) return {level:'ok', label:'Dentro ±5%'};
+  if(dev<=10) return {level:'warn', label:'Fuera de tolerancia'};
+  return {level:'crit', label:'Desviación severa'};
+}
+function loadStatus(pct){
+  if(pct<=100) return {level:'ok', label:'Normal'};
+  if(pct<=110) return {level:'warn', label:'Sobrecarga leve'};
+  return {level:'crit', label:'Sobrecarga crítica'};
+}
+function currentStatus(is){
+  const pct = is/IS_NOM*100;
+  if(pct<=100) return {level:'ok', label:'Normal'};
+  if(pct<=105) return {level:'warn', label:'Cerca del límite'};
+  return {level:'crit', label:'Supera nominal'};
+}
+function dotClass(level){ return level; }
+function safe(fn){ try{ fn(); } catch(err){ console.error('Error en '+(fn.name||'render')+':', err); } }
+
+/* -------- Escala Y dinámica -------- */
+function finiteMinMax(values){
+  const arr = values.filter(v => Number.isFinite(v));
+  if(!arr.length) return {min:0, max:1};
+  return {min: Math.min(...arr), max: Math.max(...arr)};
+}
+function niceStep(raw){
+  if(raw <= 0 || !isFinite(raw)) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const d = raw / p;
+  if(d <= 1) return 1*p;
+  if(d <= 2) return 2*p;
+  if(d <= 5) return 5*p;
+  return 10*p;
+}
+function yScaleFromDatasets(datasets, padRatio=0.08, targetTicks=6){
+  const vals = datasets.flatMap(ds => ds.data || []);
+  const {min, max} = finiteMinMax(vals);
+  const span = Math.max(max - min, 1e-6);
+  const pad = span * padRatio;
+
+  let yMin = min - pad;
+  let yMax = max + pad;
+
+  const step = niceStep((yMax - yMin) / targetTicks);
+  yMin = Math.floor(yMin / step) * step;
+  yMax = Math.ceil(yMax / step) * step;
+
+  if(yMin === yMax) yMax = yMin + step;
+  return { min:yMin, max:yMax, ticks:{ stepSize:step } };
+}
+
+/* -------- Render -------- */
+function renderNominal(){
+  const body = document.getElementById('nominalBody');
+  body.innerHTML = Object.values(NOMINAL).map(t=>`
+    <tr>
+      <td><span class="tap-tag"><span class="tap-dot dot-${t.key}"></span>${t.label}</span></td>
+      <td>${fmt0(t.vp)} V</td>
+      <td>${fmt0(t.vs)} V</td>
+      <td>${t.m}</td>
+      <td>${t.s}</td>
+      <td>${fmt1(t.ip)} A</td>
+      <td>${t.is}</td>
+      <td>${fmt1(t.vpEsN)} V</td>
+    </tr>
+  `).join('');
+}
+
+function renderKPIs(){
+  const grid = document.getElementById('kpiGrid');
+  if(state.results.length===0){
+    grid.innerHTML = '<div class="empty-note">Carga un archivo o usa los datos de muestra para ver los indicadores.</div>';
+    return;
+  }
+  const taps = MODES[state.mode].taps;
+  grid.innerHTML = taps.map(key=>{
+    const t = NOMINAL[key];
+    const vsArr = state.results.map(r=>r[key].vs);
+    const isArr = state.results.map(r=>r[key].is);
+    const pctArr = state.results.map(r=>r[key].pct);
+    const avgVs = mean(vsArr), maxVs = Math.max(...vsArr), minVs = Math.min(...vsArr);
+    const avgIs = mean(isArr), maxIs = Math.max(...isArr);
+    const avgPct = mean(pctArr), maxPct = Math.max(...pctArr);
+    const voltAlarms = state.results.filter(r=>voltStatus(r[key].vs).level!=='ok').length;
+    const loadAlarms = state.results.filter(r=>loadStatus(r[key].pct).level!=='ok').length;
+    const critAlarms = state.results.filter(r=>voltStatus(r[key].vs).level==='crit' || loadStatus(r[key].pct).level==='crit').length;
+    let overall = 'ok', overallLabel='NORMAL';
+    if(critAlarms>0){ overall='crit'; overallLabel='CRÍTICO'; }
+    else if(voltAlarms>0 || loadAlarms>0){ overall='warn'; overallLabel='ALERTA'; }
+    const maxPctStat = loadStatus(maxPct);
+    return `
+    <div class="kpi-card" style="--tapcolor:${t.color}">
+      <div class="kpi-head">
+        <div class="kpi-title"><span class="tap-dot dot-${key}"></span>${t.label}</div>
+        <span class="badge badge-${overall}">${overallLabel}</span>
+      </div>
+      <div class="kpi-metrics">
+        <div class="metric">
+          <div class="metric-label">Tensión promedio</div>
+          <div class="metric-value">${fmt1(avgVs)} V</div>
+          <div class="metric-sub">máx ${fmt1(maxVs)} · mín ${fmt1(minVs)}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Corriente promedio</div>
+          <div class="metric-value">${fmt0(avgIs)} A</div>
+          <div class="metric-sub">máx ${fmt0(maxIs)} A</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Carga promedio</div>
+          <div class="metric-value ${avgPct>100?'flag-warn':''}">${fmt1(avgPct)}%</div>
+          <div class="metric-sub">de ${t.s} kVA nom.</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Carga máxima</div>
+          <div class="metric-value ${maxPctStat.level!=='ok'?'flag-'+maxPctStat.level:''}">${fmt1(maxPct)}%</div>
+          <div class="metric-sub">${maxPctStat.label}</div>
+        </div>
+      </div>
+      <div class="kpi-alarmline">
+        <span>Fuera tol. V: <b style="color:var(--ink)">${voltAlarms}</b></span>
+        <span>Sobrecarga: <b style="color:var(--ink)">${loadAlarms}</b></span>
+        <span>Muestras: ${state.results.length}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function downsample(arr, target){
+  if(arr.length<=target) return arr;
+  const step = arr.length/target;
+  const out=[];
+  for(let i=0;i<target;i++) out.push(arr[Math.floor(i*step)]);
+  return out;
+}
+function destroyCharts(){
+  Object.keys(charts).forEach(k=>{ if(charts[k]){ charts[k].destroy(); charts[k]=null; } });
+}
+
+function showChartLibWarning(){
+  const ids = ['chartVoltage','chartCurrent','chartLoad','chartVsUsysTap5','chartIsIsysTap5'];
+  ids.forEach(id=>{
+    const canvas = document.getElementById(id);
+    if(!canvas) return;
+    const card = canvas.closest('.chart-card');
+    if(!card) return;
+    let warn = card.querySelector('.chart-warning');
+    if(!warn){
+      warn = document.createElement('div');
+      warn.className = 'chart-warning';
+      card.appendChild(warn);
+    }
+    warn.textContent = 'No se pudo cargar la librería de gráficos (Chart.js). Verifica que exista ./libs/chart.umd.min.js o habilita internet para fallback CDN.';
+    canvas.style.display = 'none';
+  });
+}
+function clearChartLibWarning(){
+  document.querySelectorAll('.chart-warning').forEach(w=>w.remove());
+  document.querySelectorAll('.chart-card canvas').forEach(c=>c.style.display='');
+}
+
+function baseChartOptions(yLabel, yScale){
+  return {
+    responsive:true,
+    animation:false,
+    interaction:{mode:'index', intersect:false},
+    plugins:{
+      legend:{labels:{color:'#5b7185', font:{family:'Inter', size:11}, boxWidth:12, usePointStyle:true}},
+      tooltip:{
+        backgroundColor:'#00284d', titleColor:'#fff', bodyColor:'#fff', borderColor:'#00509e', borderWidth:1,
+        titleFont:{family:'JetBrains Mono', size:11}, bodyFont:{family:'JetBrains Mono', size:11}
+      },
+    },
+    scales:{
+      x:{
+        ticks:{
+          color:'#5b7185',
+          font:{family:'JetBrains Mono', size:9.5},
+          maxTicksLimit:10,
+          autoSkip:true,
+          maxRotation:0
+        },
+        grid:{color:'#dbe6f0'}
+      },
+      y:{
+        ...yScale,
+        ticks:{...(yScale?.ticks||{}), color:'#5b7185', font:{family:'JetBrains Mono', size:10}},
+        grid:{color:'#dbe6f0'},
+        title:{display:true, text:yLabel, color:'#5b7185', font:{family:'Inter', size:11, weight:'bold'}}
+      }
+    }
+  };
+}
+
+function renderCharts(){
+  if(typeof Chart === 'undefined'){
+    showChartLibWarning();
+    return;
+  }
+  clearChartLibWarning();
+  destroyCharts();
+  if(state.results.length===0) return;
+
+  const sampled = downsample(state.results, 420);
+  const labels = sampled.map(r=>fmtDate(r.date));
+  const taps = MODES[state.mode].taps;
+
+  const voltDatasets = taps.map(key=>({
+    label: NOMINAL[key].label+' (V)', data: sampled.map(r=>r[key].vs),
+    borderColor: resolvedColor[key], backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:0.15,
+  }));
+  voltDatasets.push({ label:'Nominal 440V', data: sampled.map(()=>440), borderColor:'#0b2540', borderDash:[4,4], borderWidth:1, pointRadius:0 });
+  voltDatasets.push({ label:'+5%', data: sampled.map(()=>462), borderColor:'#d1495b', borderDash:[2,3], borderWidth:1, pointRadius:0 });
+  voltDatasets.push({ label:'-5%', data: sampled.map(()=>418), borderColor:'#d1495b', borderDash:[2,3], borderWidth:1, pointRadius:0 });
+
+  charts.voltage = new Chart(document.getElementById('chartVoltage'), {
+    type:'line',
+    data:{labels, datasets:voltDatasets},
+    options: baseChartOptions('Volts', yScaleFromDatasets(voltDatasets))
+  });
+
+  const curDatasets = taps.map(key=>({
+    label: NOMINAL[key].label+' (A)', data: sampled.map(r=>r[key].is),
+    borderColor: resolvedColor[key], backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:0.15,
+  }));
+  curDatasets.push({ label:'Nominal '+IS_NOM+'A', data: sampled.map(()=>IS_NOM), borderColor:'#0b2540', borderDash:[4,4], borderWidth:1, pointRadius:0 });
+
+  charts.current = new Chart(document.getElementById('chartCurrent'), {
+    type:'line',
+    data:{labels, datasets:curDatasets},
+    options: baseChartOptions('Amperes', yScaleFromDatasets(curDatasets))
+  });
+
+  const loadDatasets = taps.map(key=>({
+    label: NOMINAL[key].label+' (%)', data: sampled.map(r=>r[key].pct),
+    borderColor: resolvedColor[key], backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:0.15,
+  }));
+  loadDatasets.push({ label:'Nominal 100%', data: sampled.map(()=>100), borderColor:'#d1495b', borderDash:[4,4], borderWidth:1.2, pointRadius:0 });
+
+  charts.load = new Chart(document.getElementById('chartLoad'), {
+    type:'line',
+    data:{labels, datasets:loadDatasets},
+    options: baseChartOptions('% de potencia nominal', yScaleFromDatasets(loadDatasets))
+  });
+
+  const vTap5Datasets = [
+    { label:'Usys (medido)', data: sampled.map(r=>r.usys), borderColor: resolvedColor.fabrica, backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:0.15 },
+    { label:'Vs estimada Tap 5', data: sampled.map(r=>r.tap5.vs), borderColor: resolvedColor.tap5, backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:0.15 },
+  ];
+  charts.vsUsysTap5 = new Chart(document.getElementById('chartVsUsysTap5'), {
+    type:'line',
+    data:{ labels, datasets:vTap5Datasets },
+    options: baseChartOptions('Volts', yScaleFromDatasets(vTap5Datasets))
+  });
+
+  const iTap5Datasets = [
+    { label:'Isys (medido)', data: sampled.map(r=>r.isys), borderColor: resolvedColor.fabrica, backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:0.15 },
+    { label:'Is estimada Tap 5', data: sampled.map(r=>r.tap5.is), borderColor: resolvedColor.tap5, backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:0.15 },
+  ];
+  charts.isIsysTap5 = new Chart(document.getElementById('chartIsIsysTap5'), {
+    type:'line',
+    data:{ labels, datasets:iTap5Datasets },
+    options: baseChartOptions('Amperes', yScaleFromDatasets(iTap5Datasets))
+  });
+}
+
+function renderAnalysis(){
+  const el = document.getElementById('analysisContent');
+  if(state.results.length===0){
+    el.innerHTML = '<div class="empty-note" style="border-color: rgba(255,255,255,0.3); background: transparent; color: #fff;">Carga datos para calcular la posición de TAP recomendada.</div>';
+    return;
+  }
+  const n = state.results.length;
+  const stats = Object.keys(NOMINAL).map(key=>{
+    const t = NOMINAL[key];
+    const rows = state.results;
+    const volOkCount = rows.filter(r=>voltStatus(r[key].vs).level==='ok').length;
+    const loadOkCount = rows.filter(r=>r[key].pct<=100).length;
+    const volOkPct = volOkCount/n*100;
+    const loadOkPct = loadOkCount/n*100;
+    const avgPct = mean(rows.map(r=>r[key].pct));
+    const maxPct = Math.max(...rows.map(r=>r[key].pct));
+    const avgVs = mean(rows.map(r=>r[key].vs));
+    const score = 0.5*volOkPct + 0.5*loadOkPct;
+    return {key, label:t.label, color:resolvedColor[key], volOkPct, loadOkPct, avgPct, maxPct, avgVs, score};
+  });
+  stats.sort((a,b)=>b.score-a.score);
+  const best = stats[0];
+  const rank = {}; stats.forEach((s,i)=>rank[s.key]=i);
+  const iconMap = {fabrica:'FB', tap4:'T4', tap5:'T5'};
+
+  el.innerHTML = `
+    <div class="verdict-banner">
+      <div class="verdict-icon">${iconMap[best.key]}</div>
+      <div class="verdict-text">
+        La posición <b>${best.label}</b> ofrece el mejor equilibrio:
+        mantiene la tensión secundaria dentro de ±5% en <b>${fmt1(best.volOkPct)}%</b> del tiempo
+        y evita sobrecarga en <b>${fmt1(best.loadOkPct)}%</b> del tiempo, con una carga promedio de <b>${fmt1(best.avgPct)}%</b>.
+      </div>
+    </div>
+    <div class="score-table-wrap">
+      <table class="score-table">
+        <thead><tr>
+          <th>Posición</th><th>Tensión dentro de ±5%</th><th>Sin sobrecarga</th>
+          <th>Carga prom.</th><th>Carga máx.</th><th>Tensión prom.</th><th>Desempeño</th><th>Veredicto</th>
+        </tr></thead>
+        <tbody>
+          ${stats.map(s=>{
+            const verdict = rank[s.key]===0 ? {l:'Mejor opción', c:'ok'} : (s.loadOkPct<80 || s.volOkPct<80 ? {l:'No recomendado', c:'crit'} : {l:'Aceptable', c:'warn'});
+            return `<tr>
+              <td><span style="font-weight:700;"><span class="tap-dot dot-${s.key}" style="margin-right:8px;"></span>${s.label}</span></td>
+              <td>${fmt1(s.volOkPct)}%</td>
+              <td>${fmt1(s.loadOkPct)}%</td>
+              <td>${fmt1(s.avgPct)}%</td>
+              <td>${fmt1(s.maxPct)}%</td>
+              <td>${fmt1(s.avgVs)} V</td>
+              <td>
+                ${fmt1(s.score)}
+                <div class="score-bar-wrap"><div class="score-bar" style="width:${Math.min(s.score,100)}%; background:${s.color}"></div></div>
+              </td>
+              <td><span class="badge badge-${verdict.c}">${verdict.l}</span></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function getVarValue(row, key, varName){
+  if(varName==='voltage') return row[key].vs;
+  if(varName==='current') return row[key].is;
+  return row[key].pct;
+}
+function getVarStatus(value, varName){
+  if(varName==='voltage') return voltStatus(value);
+  if(varName==='current') return currentStatus(value);
+  return loadStatus(value);
+}
+function varLabel(varName){
+  return varName==='voltage' ? 'V' : varName==='current' ? 'A' : '%';
+}
+function renderExtremes(){
+  const container = document.getElementById('extremeContent');
+  if(state.results.length===0){
+    container.innerHTML = '<div class="empty-note" style="grid-column: 1/-1;">Sin datos cargados.</div>';
+    return;
+  }
+  const taps = MODES[state.mode].taps;
+  const varName = state.extremeVar;
+  const unit = varLabel(varName);
+
+  container.innerHTML = taps.map(key=>{
+    const t = NOMINAL[key];
+    const entries = state.results.map(r=>({date:r.date, value:getVarValue(r,key,varName)}));
+    const sortedDesc = [...entries].sort((a,b)=>b.value-a.value).slice(0,5);
+    const sortedAsc = [...entries].sort((a,b)=>a.value-b.value).slice(0,5);
+
+    const rowsHTML = (list)=> list.map(e=>{
+      const st = getVarStatus(e.value, varName);
+      return `<tr>
+        <td style="color:var(--ink-soft);">${fmtDate(e.date)}</td>
+        <td style="text-align:right;padding-right:8px; font-weight:700;">${fmt1(e.value)} ${unit}</td>
+        <td><span class="status-dot ${dotClass(st.level)}"></span><span style="font-size:10px;">${st.label}</span></td>
+      </tr>`;
+    }).join('');
+
+    return `
+    <div class="extreme-card">
+      <h4><span class="tap-dot dot-${key}"></span>${t.label}</h4>
+      <div class="mini-table-title">Top 5 máximos</div>
+      <table class="mini-table">${rowsHTML(sortedDesc)}</table>
+      <div class="mini-table-title" style="margin-top:20px;">Top 5 mínimos</div>
+      <table class="mini-table">${rowsHTML(sortedAsc)}</table>
+    </div>`;
+  }).join('');
+}
+
+function renderDatasetMeta(){
+  const el = document.getElementById('datasetMeta');
+  if(state.results.length===0){ el.textContent = '—'; return; }
+  const first = state.results[0].date, last = state.results[state.results.length-1].date;
+  el.innerHTML = `Registros: <b>${state.results.length}</b> · <b>${fmtDate(first)}</b> → <b>${fmtDate(last)}</b> · Base: <b>${NOMINAL[BASE_TAP].label}</b>`;
+}
+
+function renderAll(){
+  safe(renderDatasetMeta);
+  safe(renderKPIs);
+  safe(renderCharts);
+  safe(renderAnalysis);
+  safe(renderExtremes);
+}
+
+/* -------- Eventos -------- */
+document.getElementById('btnUpload').addEventListener('click', ()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', (e)=>{
+  if(e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+});
+document.getElementById('btnSample').addEventListener('click', ()=>{
+  const rows = SAMPLE_DATA.map(([d,u,i])=>({date:new Date(d.replace(' ','T')), usys:u, isys:i}));
+  rows.sort((a,b)=>a.date-b.date);
+  state.rows = rows;
+  state.results = computeResults(rows);
+  state.fileName = 'muestra_chart_sbm.csv';
+  setStatus('Usando muestra · '+rows.length+' registros', 'loaded');
+  renderAll();
+});
+document.querySelectorAll('#modeSelector .seg-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#modeSelector .seg-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.mode = btn.dataset.mode;
+    safe(renderKPIs); safe(renderCharts); safe(renderExtremes);
+  });
+});
+document.querySelectorAll('#extremeTabs .etab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#extremeTabs .etab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.extremeVar = btn.dataset.var;
+    safe(renderExtremes);
+  });
+});
+
+/* Reintento de render cuando Chart finalmente carga */
+window.addEventListener('chart-ready', ()=>{
+  if (state.results.length > 0) renderCharts();
+  else {
+    clearChartLibWarning();
+    renderCharts();
+  }
+});
+
+/* Si después de 2s no hay Chart, mostramos aviso claro */
+window.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(()=>{
+    if(typeof Chart === 'undefined'){
+      setStatus('Advertencia: Chart.js no cargó (revisa ./libs/chart.umd.min.js)', 'warn');
+      renderCharts();
+    }
+  }, 2000);
+});
+
+document.getElementById('footerNote').innerHTML =
+  'Modelo de estimación: la medición real (UsysLL, Isys) se toma con el transformador en Tap 4. ' +
+  'Se reconstruye la tensión primaria implícita (Vp = UsysLL × m·Tap4) y se proyecta la tensión secundaria en cada ' +
+  'posición como Vs = Vp / m, ajustando la corriente para conservar la potencia de la carga: Is = Isys × (UsysLL / Vs). ' +
+  'Herramienta de estimación técnica de ALPLA DE VENEZUELA.';
+
+/* Datos de muestra */
+const SAMPLE_DATA = [["2026-08-14 10:51:00",449.048,987.117],["2026-08-14 11:01:00",451.759,826.704],["2026-08-14 11:11:00",451.316,937.915],["2026-08-14 11:21:00",453.26,666.106],["2026-08-14 11:31:00",455.345,615.869],["2026-08-14 11:41:00",455.264,582.404],["2026-08-14 11:51:00",455.527,483.438],["2026-08-14 12:01:00",456.839,413.185],["2026-08-14 12:11:00",456.853,342.396],["2026-08-14 12:21:00",455.77,407.892],["2026-08-14 12:31:00",454.345,663.584],["2026-08-14 12:41:00",452.414,802.25],["2026-08-14 12:51:00",452.411,737.14],["2026-08-14 13:01:00",452.991,685.561],["2026-08-14 13:11:00",456.268,340.411],["2026-08-14 13:21:00",455.902,385.732],["2026-08-14 13:31:00",455.057,445.204],["2026-08-14 13:41:00",451.554,810.381],["2026-08-14 13:51:00",455.073,452.335],["2026-08-14 14:01:00",453.441,696.714],["2026-08-14 14:11:00",456.747,295.236],["2026-08-14 14:21:00",455.394,615.124],["2026-08-14 14:31:00",455.813,587.756],["2026-08-14 14:41:00",457.145,444.815],["2026-08-14 14:51:00",467.956,106.1],["2026-08-14 15:55:00",455.713,1298.575],["2026-08-14 16:05:00",453.032,1157.928],["2026-08-14 16:15:00",446.909,1352.952],["2026-08-14 16:25:00",447.58,1387.636],["2026-08-14 16:35:00",445.994,1535.001],["2026-08-14 16:45:00",443.895,1699.788],["2026-08-14 16:55:00",446.401,1525.856],["2026-08-14 17:05:00",431.318,2147.869],["2026-08-14 17:15:00",428.919,2055.634],["2026-08-14 17:25:00",439.886,1511.22],["2026-08-14 17:35:00",433.872,1610.686],["2026-08-14 17:45:00",431.996,1570.322],["2026-08-14 17:55:00",433.254,1360.979],["2026-08-14 18:05:00",432.609,1652.032],["2026-08-14 18:15:00",429.19,2010.017],["2026-08-14 18:25:00",430.869,1741.384],["2026-08-14 18:35:00",431.287,1729.529],["2026-08-14 18:45:00",433.799,1425.337],["2026-08-14 18:55:00",428.014,1955.475],["2026-08-14 19:05:00",432.094,1728.137],["2026-08-14 19:15:00",420.275,1437.966],["2026-08-14 19:25:00",405.333,2063.024],["2026-08-14 19:35:00",419.298,1605.794],["2026-08-14 19:45:00",416.833,1937.886],["2026-08-14 19:55:00",419.683,1648.264],["2026-08-14 20:05:00",421.873,1473.665],["2026-08-14 20:15:00",424.209,1336.936],["2026-08-14 20:25:00",420.625,1784.842],["2026-08-14 20:35:00",421.471,1602.458],["2026-08-14 20:45:00",422.333,1607.101],["2026-08-14 20:55:00",424.694,1326.316],["2026-08-14 21:05:00",424.621,1381.552],["2026-08-14 21:15:00",425.472,1377.945],["2026-08-14 21:25:00",408.254,1965.071],["2026-08-14 21:35:00",419.101,1162.962],["2026-08-14 21:45:00",415.465,1217.887],["2026-08-14 21:55:00",414.945,1332.179],["2026-08-14 22:05:00",416.072,1467.585],["2026-08-14 22:15:00",410.594,1894.655],["2026-08-14 22:25:00",417.395,1387.141],["2026-08-14 22:35:00",419.62,1194.385],["2026-08-14 22:45:00",409.371,1850.542],["2026-08-14 22:55:00",410.095,2028.754],["2026-08-14 23:05:00",405.839,1415.17],["2026-08-14 23:15:00",404.931,1794.063],["2026-08-14 23:25:00",407.009,1698.737],["2026-08-14 23:35:00",402.119,1953.115],["2026-08-14 23:45:00",406.411,1849.415],["2026-08-14 23:55:00",410.483,1399.301]];
+
+renderNominal();
+renderAll();
+</script>
+</body>
+</html>
